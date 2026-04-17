@@ -38,7 +38,27 @@ export default {
         card: {
           DEFAULT: "var(--card)",
           foreground: "var(--card-foreground)"
-        }
+        },
+        /** Perfiles (Stitch): claves planas para no pisar utilidades core (`outline`, etc.) */
+        "fh-surface": "#f7f9fc",
+        "fh-on-surface": "#2d3338",
+        "fh-on-surface-variant": "#596065",
+        "fh-primary": "#2760a4",
+        "fh-primary-dim": "#155398",
+        "fh-on-primary": "#f8f8ff",
+        "fh-primary-container": "#9dc2ff",
+        "fh-secondary": "#7049b3",
+        "fh-on-secondary": "#fef7ff",
+        "fh-secondary-container": "#ebdcff",
+        "fh-tertiary": "#a04223",
+        "fh-on-tertiary": "#fff7f5",
+        "fh-tertiary-container": "#ffa183",
+        "fh-surface-container-low": "#f1f4f7",
+        "fh-surface-container-lowest": "#ffffff",
+        "fh-surface-container-high": "#e3e9ee",
+        "fh-surface-container-highest": "#dde3e9",
+        "fh-line": "#757c81",
+        "fh-line-variant": "#acb3b8"
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -1,43 +1,46 @@
-import Link from "next/link";
-import { MemberRelationBadge } from "@/components/member-relation-badge";
-import { createMember } from "./actions";
+﻿import { Plus_Jakarta_Sans } from "next/font/google";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
+import { MembersPageClient } from "@/components/members/members-page-client";
+import type { ActivityItem } from "@/components/members/recent-activity-section";
 import { createClient } from "@/lib/supabase/server";
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap"
+});
 
 export default async function MembersPage() {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("family_members")
-    .select("id, full_name, relation, birth_date")
-    .order("full_name");
+  const [{ data }, { data: recentNotes }] = await Promise.all([
+    supabase
+      .from("family_members")
+      .select("id, full_name, relation, birth_date")
+      .order("full_name"),
+    supabase
+      .from("notifications")
+      .select("id, title, created_at")
+      .order("created_at", { ascending: false })
+      .limit(2)
+  ]);
+
+  const activities: ActivityItem[] = (recentNotes ?? []).map((n, i) => ({
+    id: n.id,
+    title: n.title,
+    atLabel: formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: es }),
+    variant: i % 2 === 0 ? "secondary" : "primary"
+  }));
+
+  const members = data ?? [];
 
   return (
-    <main className="grid gap-4 lg:grid-cols-2">
-      <section className="card">
-        <h2 className="mb-3 text-lg font-semibold">Nuevo integrante</h2>
-        <form action={createMember} className="space-y-2">
-          <input className="input" name="full_name" placeholder="Nombre completo" required />
-          <input className="input" name="birth_date" type="date" />
-          <input className="input" name="relation" placeholder="Relación (hijo/a, padre, etc.)" required />
-          <textarea className="input" name="notes" placeholder="Notas" />
-          <button className="button" type="submit">Guardar perfil</button>
-        </form>
-      </section>
-      <section className="card">
-        <h2 className="mb-3 text-lg font-semibold">Perfiles familiares</h2>
-        <div className="space-y-2">
-          {(data ?? []).map((member) => (
-            <div key={member.id} className="rounded border border-slate-200 p-3">
-              <p className="font-medium">{member.full_name}</p>
-              <MemberRelationBadge memberId={member.id} relation={member.relation} />
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                <Link className="button-secondary w-full justify-center text-center sm:w-auto" href={`/members/${member.id}/health`}>Salud</Link>
-                <Link className="button-secondary w-full justify-center text-center sm:w-auto" href={`/members/${member.id}/school`}>Escolar</Link>
-              </div>
-            </div>
-          ))}
-          {!data?.length ? <p className="text-sm text-slate-500">No hay integrantes todavía.</p> : null}
-        </div>
-      </section>
+    <main>
+      <MembersPageClient
+        fontClassName={jakarta.className}
+        members={members}
+        activities={activities}
+      />
     </main>
   );
 }
