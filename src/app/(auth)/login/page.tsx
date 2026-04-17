@@ -8,15 +8,21 @@ export default async function LoginPage({
   const params = await searchParams;
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-12">
-      <div className="card w-full max-w-md space-y-4">
-        <h1 className="text-2xl font-semibold">FamilyHub</h1>
-        <p className="text-sm text-slate-600">Accede con la cuenta administradora.</p>
+    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-fh-surface px-4 py-10 sm:px-6 sm:py-12">
+      <div className="card w-full max-w-md space-y-5 shadow-ambient">
+        <div>
+          <h1 className="bg-gradient-to-r from-fh-primary to-fh-primary-dim bg-clip-text text-3xl font-extrabold tracking-tight text-transparent">
+            FamilyHub
+          </h1>
+          <p className="mt-2 text-sm text-fh-on-surface-variant">Accede con la cuenta administradora.</p>
+        </div>
         {params.error ? (
-          <p className="rounded bg-red-50 p-2 text-sm text-red-700">{params.error}</p>
+          <p className="rounded-stitch border border-fh-error/30 bg-fh-surface-container-low p-3 text-sm text-fh-error">
+            {params.error}
+          </p>
         ) : null}
         {params.message ? (
-          <p className="rounded bg-emerald-50 p-2 text-sm text-emerald-700">
+          <p className="rounded-stitch border border-fh-primary-container/40 bg-fh-primary-container/25 p-3 text-sm text-fh-on-primary-container">
             {params.message}
           </p>
         ) : null}

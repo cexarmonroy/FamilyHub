@@ -2,11 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const ACCENTS = [
-  "border-emerald-200/80 bg-emerald-50 text-emerald-900",
-  "border-sky-200/80 bg-sky-50 text-sky-900",
-  "border-violet-200/80 bg-violet-50 text-violet-900",
-  "border-amber-200/80 bg-amber-50 text-amber-900",
-  "border-rose-200/80 bg-rose-50 text-rose-900"
+  "border-transparent bg-fh-secondary-container text-fh-on-secondary-container",
+  "border-transparent bg-fh-primary-container text-fh-on-primary-container",
+  "border-transparent bg-fh-tertiary-container text-fh-on-tertiary-container",
+  "border-transparent bg-fh-surface-container-high text-fh-on-surface",
+  "border-transparent bg-fh-surface-container text-fh-on-surface-variant"
 ] as const;
 
 export function memberAccentClasses(memberId: string): string {

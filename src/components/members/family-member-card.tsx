@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRight, GraduationCap, MoreHorizontal, Stethoscope } from "lucide-react";
+import { MemberAvatar } from "@/components/member-avatar";
 import { cn } from "@/lib/utils";
 
 type Member = {
@@ -9,6 +10,7 @@ type Member = {
   full_name: string;
   relation: string;
   birth_date: string | null;
+  avatar_url?: string | null;
 };
 
 const RING = [
@@ -22,13 +24,6 @@ const BADGE = [
   "bg-fh-primary text-fh-on-primary",
   "bg-fh-tertiary text-fh-on-tertiary"
 ] as const;
-
-function initialsFromName(fullName: string) {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  const a = parts[0]?.[0] ?? "?";
-  const b = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : (parts[0]?.[1] ?? "");
-  return (a + b).toUpperCase();
-}
 
 function ageFromBirthDate(birthDate: string | null) {
   if (!birthDate) return null;
@@ -56,15 +51,12 @@ export function FamilyMemberCard({ member, index }: { member: Member; index: num
     >
       <div className="mb-8 flex items-start justify-between">
         <div className="relative">
-          <div
-            className={cn(
-              "flex h-24 w-24 items-center justify-center rounded-full bg-fh-surface-container-high text-xl font-bold text-fh-on-surface ring-4",
-              ring
-            )}
-            aria-hidden
-          >
-            {initialsFromName(member.full_name)}
-          </div>
+          <MemberAvatar
+            fullName={member.full_name}
+            avatarUrl={member.avatar_url}
+            size="md"
+            ringClassName={cn("ring-4", ring)}
+          />
           <span
             className={cn(
               "absolute bottom-0 right-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-widest",

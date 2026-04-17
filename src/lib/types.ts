@@ -4,6 +4,8 @@ export type FamilyMember = {
   birth_date: string | null;
   relation: string;
   notes: string | null;
+  /** Ruta bajo `/public` o URL absoluta */
+  avatar_url?: string | null;
 };
 
 export type NotificationItem = {

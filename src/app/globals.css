@@ -1,5 +1,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,19 +10,19 @@
 }
 
 .card {
-  @apply rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm sm:p-5;
+  @apply rounded-stitch-lg bg-fh-surface-container-lowest p-5 shadow-ambient-soft sm:p-6;
 }
 
 .button {
-  @apply inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/40;
+  @apply inline-flex items-center justify-center rounded-stitch bg-gradient-to-br from-fh-primary to-fh-primary-dim px-4 py-2.5 text-sm font-bold text-fh-on-primary shadow-md shadow-fh-primary/20 transition hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-fh-primary/35 active:scale-[0.98];
 }
 
 .button-secondary {
-  @apply inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50;
+  @apply inline-flex items-center justify-center rounded-stitch border border-fh-line-variant/25 bg-fh-surface-container-lowest px-4 py-2.5 text-sm font-semibold text-fh-on-surface transition hover:bg-fh-surface-container-low hover:border-fh-line-variant/40;
 }
 
 .input {
-  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/25;
+  @apply w-full rounded-stitch border border-fh-line-variant/25 bg-fh-surface-container-highest px-3 py-2 text-sm text-fh-on-surface outline-none transition placeholder:text-fh-on-surface-variant focus:border-fh-primary focus:ring-2 focus:ring-fh-primary/20;
 }
 
 @layer base {
@@ -30,30 +31,31 @@
     --font-sans: var(--font-sans);
   }
   :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    /* Stitch · Gestión Familiar Centralizada (MCP designTheme) */
+    --background: #f7f9fc;
+    --foreground: #2d3338;
+    --card: #ffffff;
+    --card-foreground: #2d3338;
+    --popover: #ffffff;
+    --popover-foreground: #2d3338;
+    --primary: #2760a4;
+    --primary-foreground: #f8f8ff;
+    --secondary: #ebdcff;
+    --secondary-foreground: #623aa5;
+    --muted: #eaeef3;
+    --muted-foreground: #596065;
+    --accent: #9dc2ff;
+    --accent-foreground: #003c76;
+    --destructive: #ac3434;
+    --border: rgb(172 179 184 / 0.22);
+    --input: rgb(172 179 184 / 0.22);
+    --ring: #2760a4;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
+    --radius: 1rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.205 0 0);
@@ -100,12 +102,22 @@
     border-color: var(--border);
   }
   body {
-    @apply min-h-screen bg-slate-50 text-slate-900 antialiased;
-    background-image:
-      radial-gradient(circle at 12% 8%, rgba(220, 38, 38, 0.08), transparent 24rem),
-      radial-gradient(circle at 88% 4%, rgba(251, 113, 133, 0.06), transparent 18rem);
+    @apply min-h-screen bg-fh-surface text-fh-on-surface antialiased;
   }
   html {
     @apply font-sans;
+  }
+  .material-symbols-outlined {
+    font-family: "Material Symbols Outlined", sans-serif;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 1.25rem;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
   }
 }

@@ -50,20 +50,30 @@ export default {
         "fh-secondary": "#7049b3",
         "fh-on-secondary": "#fef7ff",
         "fh-secondary-container": "#ebdcff",
+        "fh-on-secondary-container": "#623aa5",
         "fh-tertiary": "#a04223",
         "fh-on-tertiary": "#fff7f5",
         "fh-tertiary-container": "#ffa183",
+        "fh-on-tertiary-container": "#691b00",
         "fh-surface-container-low": "#f1f4f7",
         "fh-surface-container-lowest": "#ffffff",
         "fh-surface-container-high": "#e3e9ee",
         "fh-surface-container-highest": "#dde3e9",
         "fh-line": "#757c81",
-        "fh-line-variant": "#acb3b8"
+        "fh-line-variant": "#acb3b8",
+        "fh-error": "#ac3434"
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)"
+        sm: "calc(var(--radius) - 4px)",
+        stitch: "1.5rem",
+        "stitch-lg": "2rem",
+        "stitch-xl": "3rem"
+      },
+      boxShadow: {
+        ambient: "0 8px 24px rgba(45, 51, 56, 0.06)",
+        "ambient-soft": "0 8px 24px rgba(45, 51, 56, 0.03)"
       }
     }
   },

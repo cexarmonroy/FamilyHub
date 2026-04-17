@@ -3,8 +3,7 @@
 import * as React from "react";
 import { addDays, format, isWithinInterval, parse, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarDays } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toLocalDateKey } from "@/lib/dates";
 
@@ -61,6 +60,13 @@ export function WeeklyAgendaClient({ weekStart, events }: Props) {
     [monday]
   );
 
+  const selectedIndex = dayCells.findIndex((c) => c.key === selected);
+
+  const shiftWeek = (dir: -1 | 1) => {
+    const next = Math.min(Math.max(selectedIndex + dir, 0), 6);
+    setSelected(dayCells[next]!.key);
+  };
+
   const filtered = React.useMemo(() => {
     return events.filter((e) => toLocalDateKey(new Date(e.at)) === selected);
   }, [events, selected]);
@@ -69,62 +75,77 @@ export function WeeklyAgendaClient({ weekStart, events }: Props) {
   const dayIsEmpty = filtered.length === 0;
 
   return (
-    <>
-      <div className="card min-w-0">
-        <h2 className="mb-4 text-lg font-semibold">Agenda semanal</h2>
-        <div className="-mx-2 overflow-x-auto px-2 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
-        <ToggleGroup
-          variant="outline"
-          value={[selected]}
-          onValueChange={(next) => {
-            if (next[0]) setSelected(next[0]);
-          }}
-          className="!grid w-full max-w-full grid-cols-7 gap-1 min-w-[24rem] sm:min-w-0 sm:gap-2"
-        >
-          {dayCells.map((cell) => (
-            <ToggleGroupItem
-              key={cell.key}
-              value={cell.key}
-              className={cn(
-                "h-auto min-w-0 w-full flex-col gap-0.5 rounded-lg px-1 py-1.5 font-medium sm:px-2 sm:py-2",
-                "border-slate-200/90 bg-slate-100/80 text-slate-600 shadow-none",
-                "hover:bg-slate-100 hover:text-slate-800",
-                "data-[state=on]:border-blue-900 data-[state=on]:bg-blue-900 data-[state=on]:text-white",
-                "data-[state=on]:hover:bg-blue-900 data-[state=on]:hover:text-white"
-              )}
-            >
-              <span className="text-[0.65rem] leading-tight sm:text-xs">{cell.label}</span>
-              <span className="text-[0.6rem] font-normal opacity-90 sm:text-[0.7rem]">{cell.dayNum}</span>
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+    <section className="rounded-stitch-xl bg-fh-surface-container-low p-6 md:p-8">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h3 className="text-xl font-bold text-fh-on-surface">Agenda semanal</h3>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => shiftWeek(-1)}
+            className="rounded-full p-2 text-fh-on-surface-variant transition hover:bg-fh-surface-container"
+            aria-label="Día anterior"
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => shiftWeek(1)}
+            className="rounded-full p-2 text-fh-on-surface-variant transition hover:bg-fh-surface-container"
+            aria-label="Día siguiente"
+          >
+            <ChevronRight className="size-5" />
+          </button>
         </div>
       </div>
 
-      <div className="card">
-        <h2 className="mb-4 text-lg font-semibold">Eventos</h2>
+      <div className="-mx-1 flex justify-between gap-2 overflow-x-auto pb-2 md:mx-0">
+        {dayCells.map((cell) => {
+          const on = cell.key === selected;
+          return (
+            <button
+              key={cell.key}
+              type="button"
+              onClick={() => setSelected(cell.key)}
+              className={cn(
+                "flex min-w-[4.5rem] flex-col items-center rounded-2xl px-3 py-3 transition-all md:min-w-[5rem]",
+                on
+                  ? "scale-105 bg-fh-primary text-fh-on-primary shadow-lg shadow-fh-primary/15"
+                  : "bg-fh-surface-container-lowest shadow-sm text-fh-on-surface opacity-80 hover:opacity-100"
+              )}
+            >
+              <span className={cn("mb-1 text-xs font-semibold", on ? "font-bold" : "text-fh-line")}>
+                {cell.label}
+              </span>
+              <span className={cn(on ? "text-2xl font-black" : "text-lg font-bold")}>{cell.dayNum}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-8 space-y-3">
+        <h4 className="text-sm font-bold uppercase tracking-widest text-fh-line">Eventos del día</h4>
         <div className="space-y-2">
           {filtered.map((event) => (
-            <div key={event.id} className={`rounded-xl border p-3 text-sm ${event.tone}`}>
-              <p className="font-medium">{event.title}</p>
-              <p className="text-xs opacity-80">{new Date(event.at).toLocaleString("es")}</p>
+            <div key={event.id} className={cn("rounded-xl p-3 text-sm", event.tone)}>
+              <p className="font-semibold">{event.title}</p>
+              <p className="mt-0.5 text-xs opacity-85">{new Date(event.at).toLocaleString("es")}</p>
             </div>
           ))}
           {dayIsEmpty ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center">
-              <CalendarDays className="size-10 text-slate-400" aria-hidden />
+            <div className="flex flex-col items-center gap-3 rounded-xl bg-fh-surface-container-lowest/80 px-4 py-10 text-center">
+              <CalendarDays className="size-10 text-fh-line" aria-hidden />
               {weekIsEmpty ? (
                 <>
-                  <p className="text-sm font-medium text-slate-700">¡Semana despejada!</p>
-                  <p className="max-w-sm text-sm text-slate-500">
-                    No hay exámenes, tareas ni vacunas programados en estos días. Disfruta el respiro.
+                  <p className="text-sm font-semibold text-fh-on-surface">Semana despejada</p>
+                  <p className="max-w-sm text-sm text-fh-on-surface-variant">
+                    No hay exámenes, tareas ni vacunas en esta semana.
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="text-sm font-medium text-slate-700">Todo tranquilo este día</p>
-                  <p className="max-w-sm text-sm text-slate-500">
-                    No hay pendientes para el día seleccionado. Revisa otro día o añade algo nuevo cuando quieras.
+                  <p className="text-sm font-semibold text-fh-on-surface">Sin eventos este día</p>
+                  <p className="max-w-sm text-sm text-fh-on-surface-variant">
+                    Elige otro día en la cinta o añade datos desde salud y escolar.
                   </p>
                 </>
               )}
@@ -132,6 +153,6 @@ export function WeeklyAgendaClient({ weekStart, events }: Props) {
           ) : null}
         </div>
       </div>
-    </>
+    </section>
   );
 }

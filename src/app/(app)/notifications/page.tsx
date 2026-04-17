@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { markAsRead } from "./actions";
 
@@ -9,24 +10,34 @@ export default async function NotificationsPage() {
     .order("event_at", { ascending: false });
 
   return (
-    <main className="card">
-      <h2 className="mb-4 text-lg font-semibold">Centro de notificaciones</h2>
-      <div className="space-y-2">
+    <main className="rounded-stitch-xl bg-fh-surface-container-lowest p-6 shadow-ambient-soft md:p-8">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <h2 className="text-2xl font-bold tracking-tight text-fh-on-surface">Notificaciones</h2>
+        <Link href="/dashboard" className="text-sm font-semibold text-fh-primary hover:underline">
+          Volver al tablero
+        </Link>
+      </div>
+      <div className="space-y-3">
         {(data ?? []).map((n) => (
-          <div key={n.id} className="rounded border border-slate-200 p-3">
-            <p className="font-medium">{n.title}</p>
-            <p className="text-sm text-slate-700">{n.body}</p>
-            <p className="text-xs text-slate-500">{new Date(n.event_at).toLocaleString()}</p>
+          <div
+            key={n.id}
+            className="rounded-stitch-lg bg-fh-surface-container-low p-4 transition hover:bg-fh-surface-container"
+          >
+            <p className="font-semibold text-fh-on-surface">{n.title}</p>
+            <p className="mt-1 text-sm text-fh-on-surface-variant">{n.body}</p>
+            <p className="mt-2 text-xs text-fh-line">{new Date(n.event_at).toLocaleString("es")}</p>
             {!n.read_at ? (
-              <form action={markAsRead.bind(null, n.id)} className="mt-2">
-                <button className="button-secondary text-xs" type="submit">Marcar leída</button>
+              <form action={markAsRead.bind(null, n.id)} className="mt-3">
+                <button className="button-secondary text-xs" type="submit">
+                  Marcar leída
+                </button>
               </form>
             ) : (
-              <p className="mt-2 text-xs text-emerald-700">Leída</p>
+              <p className="mt-3 text-xs font-medium text-fh-primary">Leída</p>
             )}
           </div>
         ))}
-        {!data?.length ? <p className="text-sm text-slate-500">No hay notificaciones.</p> : null}
+        {!data?.length ? <p className="text-sm text-fh-on-surface-variant">No hay notificaciones.</p> : null}
       </div>
     </main>
   );

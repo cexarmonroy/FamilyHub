@@ -10,23 +10,21 @@ import {
   RecentActivitySection,
   type ActivityItem
 } from "@/components/members/recent-activity-section";
-import { cn } from "@/lib/utils";
 
 type Member = {
   id: string;
   full_name: string;
   relation: string;
   birth_date: string | null;
+  avatar_url?: string | null;
 };
 
 export function MembersPageClient({
   members,
-  activities,
-  fontClassName
+  activities
 }: {
   members: Member[];
   activities: ActivityItem[];
-  fontClassName: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const firstFieldRef = React.useRef<HTMLInputElement>(null);
@@ -51,7 +49,7 @@ export function MembersPageClient({
   }
 
   return (
-    <div className={cn(fontClassName, "text-fh-on-surface")}>
+    <div className="text-fh-on-surface">
       <header className="mb-10 flex flex-col justify-between gap-6 md:mb-12 md:flex-row md:items-end">
         <div className="space-y-2">
           <span className="text-sm font-semibold uppercase tracking-wider text-fh-secondary">
