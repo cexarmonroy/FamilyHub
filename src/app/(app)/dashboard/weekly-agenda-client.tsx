@@ -70,33 +70,35 @@ export function WeeklyAgendaClient({ weekStart, events }: Props) {
 
   return (
     <>
-      <div className="card">
+      <div className="card min-w-0">
         <h2 className="mb-4 text-lg font-semibold">Agenda semanal</h2>
+        <div className="-mx-2 overflow-x-auto px-2 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
         <ToggleGroup
           variant="outline"
           value={[selected]}
           onValueChange={(next) => {
             if (next[0]) setSelected(next[0]);
           }}
-          className="!grid w-full max-w-full grid-cols-7 gap-2"
+          className="!grid w-full max-w-full grid-cols-7 gap-1 min-w-[24rem] sm:min-w-0 sm:gap-2"
         >
           {dayCells.map((cell) => (
             <ToggleGroupItem
               key={cell.key}
               value={cell.key}
               className={cn(
-                "h-auto min-w-0 w-full flex-col gap-0.5 rounded-lg py-2 font-medium",
+                "h-auto min-w-0 w-full flex-col gap-0.5 rounded-lg px-1 py-1.5 font-medium sm:px-2 sm:py-2",
                 "border-slate-200/90 bg-slate-100/80 text-slate-600 shadow-none",
                 "hover:bg-slate-100 hover:text-slate-800",
                 "data-[state=on]:border-blue-900 data-[state=on]:bg-blue-900 data-[state=on]:text-white",
                 "data-[state=on]:hover:bg-blue-900 data-[state=on]:hover:text-white"
               )}
             >
-              <span className="text-xs">{cell.label}</span>
-              <span className="text-[0.7rem] font-normal opacity-90">{cell.dayNum}</span>
+              <span className="text-[0.65rem] leading-tight sm:text-xs">{cell.label}</span>
+              <span className="text-[0.6rem] font-normal opacity-90 sm:text-[0.7rem]">{cell.dayNum}</span>
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
+        </div>
       </div>
 
       <div className="card">

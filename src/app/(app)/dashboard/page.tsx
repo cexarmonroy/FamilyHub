@@ -99,7 +99,7 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <main className="grid grid-cols-12 gap-4">
+    <main className="grid min-w-0 grid-cols-12 gap-4">
       <section className="col-span-12 space-y-4 lg:col-span-8">
         <WeeklyAgendaClient weekStart={weekStart} events={weeklyEventsPayload} />
       </section>

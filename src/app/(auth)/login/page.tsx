@@ -8,7 +8,7 @@ export default async function LoginPage({
   const params = await searchParams;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-6 sm:px-6 sm:py-0">
       <div className="card w-full space-y-4">
         <h1 className="text-2xl font-semibold">FamilyHub</h1>
         <p className="text-sm text-slate-600">Accede con la cuenta administradora.</p>
@@ -23,11 +23,11 @@ export default async function LoginPage({
         <form action={signIn} className="space-y-3">
           <input className="input" name="email" type="email" placeholder="admin@familia.com" required />
           <input className="input" name="password" type="password" placeholder="Contraseña" required />
-          <div className="flex gap-2">
-            <button className="button w-full" type="submit">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button className="button w-full sm:flex-1" type="submit">
               Ingresar
             </button>
-            <button className="button-secondary w-full" formAction={signUp}>
+            <button className="button-secondary w-full sm:flex-1" formAction={signUp}>
               Crear admin
             </button>
           </div>

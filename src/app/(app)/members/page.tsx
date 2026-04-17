@@ -29,9 +29,9 @@ export default async function MembersPage() {
             <div key={member.id} className="rounded border border-slate-200 p-3">
               <p className="font-medium">{member.full_name}</p>
               <MemberRelationBadge memberId={member.id} relation={member.relation} />
-              <div className="mt-2 flex gap-2">
-                <Link className="button-secondary" href={`/members/${member.id}/health`}>Salud</Link>
-                <Link className="button-secondary" href={`/members/${member.id}/school`}>Escolar</Link>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <Link className="button-secondary w-full justify-center text-center sm:w-auto" href={`/members/${member.id}/health`}>Salud</Link>
+                <Link className="button-secondary w-full justify-center text-center sm:w-auto" href={`/members/${member.id}/school`}>Escolar</Link>
               </div>
             </div>
           ))}

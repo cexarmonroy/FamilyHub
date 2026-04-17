@@ -20,9 +20,9 @@ export default async function SchoolPage({
 
   return (
     <main className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Escolar · {member?.full_name ?? "Integrante"}</h2>
-        <Link className="button-secondary" href="/members">Volver</Link>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="min-w-0 text-lg font-semibold sm:text-xl">Escolar · {member?.full_name ?? "Integrante"}</h2>
+        <Link className="button-secondary w-full shrink-0 justify-center text-center sm:w-auto" href="/members">Volver</Link>
       </div>
 
       <section className="grid gap-4 lg:grid-cols-3">

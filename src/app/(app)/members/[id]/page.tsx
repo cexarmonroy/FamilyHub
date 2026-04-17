@@ -73,22 +73,22 @@ export default async function MemberDetailPage({
 
   return (
     <main className="space-y-4">
-      <div className="card flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold">{member.full_name}</h2>
+      <div className="card flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl font-semibold sm:text-2xl">{member.full_name}</h2>
           <p className="text-sm text-slate-600">
             {member.relation}
             {age !== null ? ` · ${age} años` : ""}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link className="button-secondary" href={`/members/${id}/health`}>
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+          <Link className="button-secondary w-full justify-center text-center sm:w-auto" href={`/members/${id}/health`}>
             Ver salud
           </Link>
-          <Link className="button-secondary" href={`/members/${id}/school`}>
+          <Link className="button-secondary w-full justify-center text-center sm:w-auto" href={`/members/${id}/school`}>
             Ver escolar
           </Link>
-          <Link className="button-secondary" href="/members">
+          <Link className="button-secondary w-full justify-center text-center sm:w-auto" href="/members">
             Volver a perfiles
           </Link>
         </div>
