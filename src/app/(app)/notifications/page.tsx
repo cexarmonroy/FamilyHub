@@ -27,7 +27,8 @@ export default async function NotificationsPage() {
             <p className="mt-1 text-sm text-fh-on-surface-variant">{n.body}</p>
             <p className="mt-2 text-xs text-fh-line">{new Date(n.event_at).toLocaleString("es")}</p>
             {!n.read_at ? (
-              <form action={markAsRead.bind(null, n.id)} className="mt-3">
+              <form action={markAsRead} className="mt-3">
+                <input type="hidden" name="notification_id" value={n.id} />
                 <button className="button-secondary text-xs" type="submit">
                   Marcar leída
                 </button>

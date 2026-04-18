@@ -30,11 +30,14 @@ function isUrgent(dueAt: string, status: string) {
 }
 
 export default async function SchoolPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
+  const { error: actionError } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: member }, { data: items }, { data: tests }, { data: tasks }] =
@@ -52,6 +55,14 @@ export default async function SchoolPage({
 
   return (
     <div className="pb-4">
+      {actionError ? (
+        <div
+          className="mb-6 rounded-stitch-lg border border-fh-error/30 bg-fh-error-container/15 px-4 py-3 text-sm text-fh-error"
+          role="alert"
+        >
+          <strong className="font-semibold">No se pudo guardar.</strong> {actionError}
+        </div>
+      ) : null}
       <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
         <div className="flex items-center gap-4">
           <Link
@@ -127,7 +138,8 @@ export default async function SchoolPage({
                 <p className="text-sm text-fh-on-surface-variant">Aún no hay materiales listados.</p>
               ) : null}
             </div>
-            <form action={addItem.bind(null, id)} className="mt-4 space-y-3 border-t border-fh-line-variant/10 pt-4">
+            <form action={addItem} className="mt-4 space-y-3 border-t border-fh-line-variant/10 pt-4">
+              <input type="hidden" name="member_id" value={id} />
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <input className="input" name="item" placeholder="Material" required />
                 <input className="input" name="quantity" type="number" min={1} defaultValue={1} required />
@@ -206,7 +218,8 @@ export default async function SchoolPage({
               <p className="text-sm text-fh-on-surface-variant">No hay pruebas programadas.</p>
             ) : null}
           </div>
-          <form action={addTest.bind(null, id)} className="mt-4 space-y-3 border-t border-fh-line-variant/10 pt-4">
+          <form action={addTest} className="mt-4 space-y-3 border-t border-fh-line-variant/10 pt-4">
+            <input type="hidden" name="member_id" value={id} />
             <input className="input" name="subject" placeholder="Asignatura" required />
             <input className="input" name="test_at" type="datetime-local" required />
             <textarea className="input" name="notes" placeholder="Notas o temario" rows={2} />
@@ -298,7 +311,8 @@ export default async function SchoolPage({
             ) : null}
           </div>
 
-          <form action={addTask.bind(null, id)} className="mt-4 space-y-3 border-t border-fh-line-variant/10 pt-4">
+          <form action={addTask} className="mt-4 space-y-3 border-t border-fh-line-variant/10 pt-4">
+            <input type="hidden" name="member_id" value={id} />
             <input className="input" name="title" placeholder="Título de la tarea" required />
             <input className="input" name="due_at" type="datetime-local" required />
             <select className="input" name="status" defaultValue="pending">

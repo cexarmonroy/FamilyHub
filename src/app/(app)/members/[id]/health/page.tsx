@@ -101,7 +101,8 @@ export default async function HealthPage({
                 Ficha clínica
               </h2>
             </div>
-            <form action={saveHealthProfile.bind(null, id)} className="space-y-4">
+            <form action={saveHealthProfile} className="space-y-4">
+              <input type="hidden" name="member_id" value={id} />
               <div className="rounded-lg bg-fh-surface-container-low p-4">
                 <label className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-fh-on-surface-variant">
                   Grupo sanguíneo
@@ -185,7 +186,8 @@ export default async function HealthPage({
                   </div>
                 </div>
               </div>
-              <form action={addMetric.bind(null, id)} className="space-y-3">
+              <form action={addMetric} className="space-y-3">
+                <input type="hidden" name="member_id" value={id} />
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   <input
                     className="rounded-xl border-0 bg-white/15 px-3 py-2.5 text-sm text-fh-on-primary placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-white/40"
@@ -266,9 +268,10 @@ export default async function HealthPage({
             </div>
             <form
               id="add-medication"
-              action={addMedication.bind(null, id)}
+              action={addMedication}
               className="mt-6 space-y-3 border-t border-fh-line-variant/15 pt-6"
             >
+              <input type="hidden" name="member_id" value={id} />
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <input className="input" name="name" placeholder="Nombre" required />
                 <input className="input" name="dose" placeholder="Dosis" required />
@@ -350,7 +353,8 @@ export default async function HealthPage({
             {!vaccines?.length ? (
               <p className="text-sm text-fh-on-surface-variant">Sin vacunas registradas.</p>
             ) : null}
-            <form action={addVaccine.bind(null, id)} className="mt-4 space-y-3">
+            <form action={addVaccine} className="mt-4 space-y-3">
+              <input type="hidden" name="member_id" value={id} />
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <input className="input" name="vaccine_name" placeholder="Vacuna" required />
                 <input className="input" name="applied_at" type="date" />
@@ -402,7 +406,8 @@ export default async function HealthPage({
                 <p className="text-sm text-fh-on-surface-variant">Sin visitas registradas.</p>
               ) : null}
             </div>
-            <form action={addVisit.bind(null, id)} className="mt-4 space-y-3">
+            <form action={addVisit} className="mt-4 space-y-3">
+              <input type="hidden" name="member_id" value={id} />
               <input className="input bg-white" name="visited_at" type="datetime-local" required />
               <input className="input bg-white" name="provider" placeholder="Profesional / centro" required />
               <input className="input bg-white" name="reason" placeholder="Motivo" required />

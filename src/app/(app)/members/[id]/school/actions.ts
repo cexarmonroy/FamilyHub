@@ -1,39 +1,116 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function addItem(memberId: string, formData: FormData) {
+function schoolError(memberId: string, message: string) {
+  redirect(`/members/${memberId}/school?error=${encodeURIComponent(message.slice(0, 240))}`);
+}
+
+function readMemberId(formData: FormData): string {
+  return String(formData.get("member_id") ?? "").trim();
+}
+
+export async function addItem(formData: FormData) {
+  const memberId = readMemberId(formData);
+  if (!memberId) redirect("/members?error=" + encodeURIComponent("Falta el integrante."));
+
   const supabase = await createClient();
-  await supabase.from("school_items").insert({
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: memberRow, error: memberErr } = await supabase
+    .from("family_members")
+    .select("id")
+    .eq("id", memberId)
+    .maybeSingle();
+  if (memberErr || !memberRow) schoolError(memberId, "Integrante no encontrado o sin permiso.");
+
+  const item = String(formData.get("item") ?? "").trim();
+  if (!item) schoolError(memberId, "Indica el nombre del material.");
+
+  const { error } = await supabase.from("school_items").insert({
     member_id: memberId,
-    item: String(formData.get("item") ?? ""),
-    quantity: Number(formData.get("quantity") ?? 1),
-    due_at: String(formData.get("due_at") ?? "") || null,
+    owner_user_id: user.id,
+    item,
+    quantity: Number(formData.get("quantity") ?? 1) || 1,
+    due_at: String(formData.get("due_at") ?? "").trim() || null,
     status: "pending"
   });
+  if (error) schoolError(memberId, error.message);
   revalidatePath(`/members/${memberId}/school`);
 }
 
-export async function addTest(memberId: string, formData: FormData) {
+export async function addTest(formData: FormData) {
+  const memberId = readMemberId(formData);
+  if (!memberId) redirect("/members?error=" + encodeURIComponent("Falta el integrante."));
+
   const supabase = await createClient();
-  await supabase.from("school_tests").insert({
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: memberRow, error: memberErr } = await supabase
+    .from("family_members")
+    .select("id")
+    .eq("id", memberId)
+    .maybeSingle();
+  if (memberErr || !memberRow) schoolError(memberId, "Integrante no encontrado o sin permiso.");
+
+  const subject = String(formData.get("subject") ?? "").trim();
+  let testAt = String(formData.get("test_at") ?? "").trim();
+  if (!subject || !testAt) {
+    schoolError(memberId, "Completa asignatura y fecha/hora de la prueba.");
+  }
+  if (testAt.length === 16) testAt = `${testAt}:00`;
+
+  const { error } = await supabase.from("school_tests").insert({
     member_id: memberId,
-    subject: String(formData.get("subject") ?? ""),
-    test_at: String(formData.get("test_at") ?? ""),
-    notes: String(formData.get("notes") ?? "") || null
+    owner_user_id: user.id,
+    subject,
+    test_at: testAt,
+    notes: String(formData.get("notes") ?? "").trim() || null
   });
+  if (error) schoolError(memberId, error.message);
   revalidatePath(`/members/${memberId}/school`);
 }
 
-export async function addTask(memberId: string, formData: FormData) {
+export async function addTask(formData: FormData) {
+  const memberId = readMemberId(formData);
+  if (!memberId) redirect("/members?error=" + encodeURIComponent("Falta el integrante."));
+
   const supabase = await createClient();
-  await supabase.from("school_tasks").insert({
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: memberRow, error: memberErr } = await supabase
+    .from("family_members")
+    .select("id")
+    .eq("id", memberId)
+    .maybeSingle();
+  if (memberErr || !memberRow) schoolError(memberId, "Integrante no encontrado o sin permiso.");
+
+  const title = String(formData.get("title") ?? "").trim();
+  let dueAt = String(formData.get("due_at") ?? "").trim();
+  if (!title || !dueAt) {
+    schoolError(memberId, "Completa título y fecha de entrega de la tarea.");
+  }
+  if (dueAt.length === 16) dueAt = `${dueAt}:00`;
+
+  const { error } = await supabase.from("school_tasks").insert({
     member_id: memberId,
-    title: String(formData.get("title") ?? ""),
-    due_at: String(formData.get("due_at") ?? ""),
+    owner_user_id: user.id,
+    title,
+    due_at: dueAt,
     status: String(formData.get("status") ?? "pending"),
-    notes: String(formData.get("notes") ?? "") || null
+    notes: String(formData.get("notes") ?? "").trim() || null
   });
+  if (error) schoolError(memberId, error.message);
   revalidatePath(`/members/${memberId}/school`);
 }
