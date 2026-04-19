@@ -6,6 +6,8 @@ import { ArrowRight, ClipboardList, School, Stethoscope } from "lucide-react";
 import { MemberRelationBadge } from "@/components/member-relation-badge";
 import { WeeklyAgendaClient } from "./weekly-agenda-client";
 import { toLocalDateKey } from "@/lib/dates";
+import { buildDashboardState } from "@/lib/alerts/engine";
+import type { AlertLevel } from "@/lib/alerts/types";
 import { createClient } from "@/lib/supabase/server";
 
 function toDateRange() {
@@ -21,43 +23,62 @@ function toDateRange() {
   return { monday, sunday };
 }
 
+function globalStatusCopy(status: AlertLevel): { text: string; className: string } {
+  if (status === "critical") return { text: "Acciones urgentes", className: "text-red-600" };
+  if (status === "warning") return { text: "Atención esta semana", className: "text-amber-600" };
+  return { text: "Todo en orden", className: "text-emerald-600" };
+}
+
+function memberStatusDotClass(status: AlertLevel): string {
+  if (status === "critical") return "bg-red-500";
+  if (status === "warning") return "bg-amber-500";
+  return "bg-emerald-500";
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { monday, sunday } = toDateRange();
+  const todayStr = toLocalDateKey(new Date());
 
   const [
     { data: tests },
     { data: tasks },
     { data: vaccines },
-    { data: alerts },
+    { data: unreadNotifications },
+    { data: visitCourses },
     { data: members },
     { data: feedNotes }
   ] = await Promise.all([
     supabase
       .from("school_tests")
-      .select("id, subject, test_at, family_members(full_name)")
+      .select("id, member_id, subject, test_at, family_members(full_name)")
       .gte("test_at", monday.toISOString())
       .lte("test_at", sunday.toISOString())
       .order("test_at", { ascending: true }),
     supabase
       .from("school_tasks")
-      .select("id, title, due_at, status, family_members(full_name)")
+      .select("id, member_id, title, due_at, status, family_members(full_name)")
       .gte("due_at", monday.toISOString())
       .lte("due_at", sunday.toISOString())
       .order("due_at", { ascending: true }),
     supabase
       .from("vaccines")
-      .select("id, vaccine_name, next_due_at, family_members(full_name)")
+      .select("id, member_id, vaccine_name, next_due_at, family_members(full_name)")
       .not("next_due_at", "is", null)
       .gte("next_due_at", monday.toISOString().slice(0, 10))
       .lte("next_due_at", sunday.toISOString().slice(0, 10))
       .order("next_due_at", { ascending: true }),
     supabase
       .from("notifications")
-      .select("id, title, body, event_at")
+      .select("id, title, body, event_at, type, member_id")
       .is("read_at", null)
       .order("event_at", { ascending: true })
       .limit(8),
+    supabase
+      .from("visit_medication_courses")
+      .select("id, medication_name, treatment_start, treatment_end, member_id, family_members(full_name)")
+      .lte("treatment_start", todayStr)
+      .gte("treatment_end", todayStr),
     supabase
       .from("family_members")
       .select("id, full_name, relation, avatar_url")
@@ -70,92 +91,81 @@ export default async function DashboardPage() {
       .limit(6)
   ]);
 
-  const weeklyEvents = [
-    ...(tests ?? []).map((item) => ({
-      id: `test-${item.id}`,
-      title: `Prueba: ${item.subject}`,
-      at: new Date(item.test_at),
-      tone: "border border-fh-primary-container/35 bg-fh-primary-container/20 text-fh-on-background"
+  const memberRows = members ?? [];
+
+  const dash = buildDashboardState({
+    monday,
+    sunday,
+    tests: tests ?? [],
+    tasks: tasks ?? [],
+    vaccines: vaccines ?? [],
+    visitCourses: visitCourses ?? [],
+    notifications: (unreadNotifications ?? []).map((n) => ({
+      id: n.id,
+      title: n.title,
+      body: n.body,
+      event_at: n.event_at,
+      type: n.type ?? "info",
+      member_id: n.member_id
     })),
-    ...(tasks ?? []).map((item) => ({
-      id: `task-${item.id}`,
-      title: `Tarea: ${item.title}`,
-      at: new Date(item.due_at),
-      tone: "border border-fh-secondary/25 bg-fh-secondary-container/40 text-fh-on-background"
-    })),
-    ...(vaccines ?? []).map((item) => ({
-      id: `vac-${item.id}`,
-      title: `Vacuna: ${item.vaccine_name}`,
-      at: new Date(`${item.next_due_at}T09:00:00`),
-      tone: "border border-fh-tertiary-container/50 bg-fh-tertiary-container/25 text-fh-on-background"
+    members: memberRows.map((m) => ({
+      id: m.id,
+      full_name: m.full_name,
+      relation: m.relation
     }))
-  ].sort((a, b) => a.at.getTime() - b.at.getTime());
+  });
 
   const weekStart = toLocalDateKey(monday);
-  const weeklyEventsPayload = weeklyEvents.map((e) => ({
-    id: e.id,
-    title: e.title,
-    at: e.at.toISOString(),
-    tone: e.tone
-  }));
-
-  const nextTest = (tests ?? [])[0];
-  const nextVaccine = (vaccines ?? [])[0];
-  const nextTask = (tasks ?? []).find((t) => t.status !== "done");
+  const weeklyEventsPayload = dash.agendaEvents;
 
   const memberName = (row: { family_members: unknown }) => {
-    const m = row.family_members as { full_name?: string } | null;
-    return m?.full_name?.trim() || "Familiar";
+    const m = row.family_members as { full_name?: string } | { full_name?: string }[] | null;
+    const o = Array.isArray(m) ? m[0] : m;
+    return o?.full_name?.trim() || "Familiar";
   };
-
-  const priorityCount = (alerts?.length ?? 0) + (nextTest ? 1 : 0) + (nextVaccine ? 1 : 0);
 
   const upcomingHealthRows = (vaccines ?? []).slice(0, 2);
   const upcomingTasksRows = (tasks ?? []).filter((t) => t.status !== "done").slice(0, 2);
+
+  const header = globalStatusCopy(dash.globalStatus);
 
   return (
     <main className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-12">
       <div className="space-y-8 lg:col-span-8">
         <section>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <h2 className="text-3xl font-bold tracking-tight text-fh-on-surface">Resumen de hoy</h2>
-            {priorityCount > 0 ? (
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight text-fh-on-surface">Resumen de hoy</h2>
+              <p className={`mt-1 text-sm font-semibold ${header.className}`}>{header.text}</p>
+            </div>
+            {dash.alertCount > 0 ? (
               <span className="rounded-full bg-fh-secondary-container px-4 py-1 text-sm font-semibold text-fh-secondary">
-                {priorityCount} alertas prioritarias
+                {dash.alertCount} alertas
               </span>
             ) : null}
           </div>
+
+          {dash.priorityAlerts.length > 0 ? (
+            <div className="mb-4 rounded-stitch-lg border border-red-200/80 bg-red-50/90 p-4 shadow-ambient-soft dark:border-red-900/40 dark:bg-red-950/30">
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-red-800 dark:text-red-200">
+                Prioritarias
+              </p>
+              <ul className="space-y-2 text-sm text-red-900 dark:text-red-100">
+                {dash.priorityAlerts.map((a) => (
+                  <li key={a.id}>· {a.message}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex items-start gap-4 rounded-stitch-lg border-l-4 border-fh-primary bg-fh-surface-container-lowest p-6 shadow-ambient">
               <div className="rounded-xl bg-fh-primary-container p-3 text-fh-on-primary-container">
                 <School className="size-6 shrink-0" strokeWidth={2} aria-hidden />
               </div>
               <div className="min-w-0">
-                {nextTest ? (
-                  <>
-                    <p className="mb-1 text-xs font-bold uppercase tracking-widest text-fh-primary">
-                      Escuela · {memberName(nextTest)}
-                    </p>
-                    <h3 className="text-lg font-semibold text-fh-on-surface">Prueba: {nextTest.subject}</h3>
-                    <p className="mt-1 text-sm text-fh-on-surface-variant">
-                      {new Date(nextTest.test_at).toLocaleString("es", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="mb-1 text-xs font-bold uppercase tracking-widest text-fh-primary">Escuela</p>
-                    <h3 className="text-lg font-semibold text-fh-on-surface">Sin pruebas esta semana</h3>
-                    <p className="mt-1 text-sm text-fh-on-surface-variant">
-                      Añade fechas desde el seguimiento escolar de cada perfil.
-                    </p>
-                  </>
-                )}
+                <p className="mb-1 text-xs font-bold uppercase tracking-widest text-fh-primary">Escuela</p>
+                <h3 className="text-lg font-semibold leading-snug text-fh-on-surface">{dash.summary.school}</h3>
               </div>
             </div>
             <div className="flex items-start gap-4 rounded-stitch-lg border-l-4 border-fh-tertiary bg-fh-surface-container-lowest p-6 shadow-ambient">
@@ -163,35 +173,8 @@ export default async function DashboardPage() {
                 <Stethoscope className="size-6 shrink-0" strokeWidth={2} aria-hidden />
               </div>
               <div className="min-w-0">
-                {nextVaccine ? (
-                  <>
-                    <p className="mb-1 text-xs font-bold uppercase tracking-widest text-fh-tertiary">
-                      Salud · {memberName(nextVaccine)}
-                    </p>
-                    <h3 className="text-lg font-semibold text-fh-on-surface">Vacuna: {nextVaccine.vaccine_name}</h3>
-                    <p className="mt-1 text-sm text-fh-on-surface-variant">
-                      Próxima dosis: {nextVaccine.next_due_at}
-                    </p>
-                  </>
-                ) : nextTask ? (
-                  <>
-                    <p className="mb-1 text-xs font-bold uppercase tracking-widest text-fh-tertiary">
-                      Escuela · {memberName(nextTask)}
-                    </p>
-                    <h3 className="text-lg font-semibold text-fh-on-surface">Tarea: {nextTask.title}</h3>
-                    <p className="mt-1 text-sm text-fh-on-surface-variant">
-                      Vence {new Date(nextTask.due_at).toLocaleString("es")}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="mb-1 text-xs font-bold uppercase tracking-widest text-fh-tertiary">Salud</p>
-                    <h3 className="text-lg font-semibold text-fh-on-surface">Todo al día</h3>
-                    <p className="mt-1 text-sm text-fh-on-surface-variant">
-                      No hay vacunas ni tareas urgentes en el rango visible.
-                    </p>
-                  </>
-                )}
+                <p className="mb-1 text-xs font-bold uppercase tracking-widest text-fh-tertiary">Salud</p>
+                <h3 className="text-lg font-semibold leading-snug text-fh-on-surface">{dash.summary.health}</h3>
               </div>
             </div>
           </div>
@@ -303,37 +286,48 @@ export default async function DashboardPage() {
           <div className="mt-8 border-t border-fh-line-variant/20 pt-8">
             <h4 className="mb-4 text-sm font-bold uppercase tracking-widest text-fh-line">Integrantes</h4>
             <div className="space-y-2">
-              {(members ?? []).map((member) => (
-                <Link
-                  key={member.id}
-                  href={`/members/${member.id}`}
-                  className="flex items-center gap-3 rounded-xl bg-fh-surface-container-lowest p-3 transition hover:bg-white"
-                >
-                  <MemberAvatar
-                    fullName={member.full_name}
-                    avatarUrl={member.avatar_url}
-                    size="sm"
-                    ringClassName="ring-2 ring-fh-primary-container/40"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-fh-on-surface">{member.full_name}</p>
-                    <MemberRelationBadge memberId={member.id} relation={member.relation} />
-                  </div>
-                  <ArrowRight className="size-4 shrink-0 text-fh-line" />
-                </Link>
-              ))}
-              {!members?.length ? (
+              {memberRows.map((member) => {
+                const st = dash.members.find((m) => m.id === member.id);
+                return (
+                  <Link
+                    key={member.id}
+                    href={`/members/${member.id}`}
+                    className="flex items-center gap-3 rounded-xl bg-fh-surface-container-lowest p-3 transition hover:bg-white"
+                  >
+                    <span
+                      className={`size-2 shrink-0 rounded-full ${memberStatusDotClass(st?.status ?? "ok")}`}
+                      title={st?.highlight ?? undefined}
+                      aria-hidden
+                    />
+                    <MemberAvatar
+                      fullName={member.full_name}
+                      avatarUrl={member.avatar_url}
+                      size="sm"
+                      ringClassName="ring-2 ring-fh-primary-container/40"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-fh-on-surface">{member.full_name}</p>
+                      <MemberRelationBadge memberId={member.id} relation={member.relation} />
+                      {st?.highlight ? (
+                        <p className="mt-0.5 truncate text-[11px] text-fh-on-surface-variant">{st.highlight}</p>
+                      ) : null}
+                    </div>
+                    <ArrowRight className="size-4 shrink-0 text-fh-line" />
+                  </Link>
+                );
+              })}
+              {!memberRows.length ? (
                 <p className="text-sm text-fh-on-surface-variant">Añade familiares desde Perfiles.</p>
               ) : null}
             </div>
           </div>
         </div>
 
-        {(alerts ?? []).length > 0 ? (
+        {(unreadNotifications ?? []).length > 0 ? (
           <div className="rounded-stitch-lg bg-fh-surface-container-lowest p-5 shadow-ambient-soft">
             <h4 className="mb-3 text-sm font-bold text-fh-on-surface">Notificaciones activas</h4>
             <ul className="space-y-2 text-sm">
-              {(alerts ?? []).slice(0, 4).map((n) => (
+              {(unreadNotifications ?? []).slice(0, 4).map((n) => (
                 <li key={n.id} className="rounded-xl bg-fh-surface-container-low p-3 text-fh-on-surface">
                   <span className="font-semibold">{n.title}</span>
                   {n.body ? <p className="mt-1 text-xs text-fh-on-surface-variant">{n.body}</p> : null}

@@ -53,14 +53,58 @@ export async function addMedication(formData: FormData) {
 
 export async function addVisit(formData: FormData) {
   const { memberId, supabase } = await requireMember(formData);
-  await supabase.from("medical_visits").insert({
-    member_id: memberId,
-    visited_at: String(formData.get("visited_at") ?? new Date().toISOString()),
-    provider: String(formData.get("provider") ?? ""),
-    reason: String(formData.get("reason") ?? ""),
-    notes: String(formData.get("notes") ?? "") || null
-  });
+  const { data: visit, error } = await supabase
+    .from("medical_visits")
+    .insert({
+      member_id: memberId,
+      visited_at: String(formData.get("visited_at") ?? new Date().toISOString()),
+      provider: String(formData.get("provider") ?? ""),
+      reason: String(formData.get("reason") ?? ""),
+      notes: String(formData.get("notes") ?? "") || null
+    })
+    .select("id")
+    .single();
+
+  if (error || !visit) {
+    revalidatePath(`/members/${memberId}/health`);
+    return;
+  }
+
+  const courseRows: {
+    visit_id: string;
+    member_id: string;
+    medication_name: string;
+    dose: string;
+    frequency: string;
+    treatment_start: string;
+    treatment_end: string;
+    notes: string | null;
+  }[] = [];
+
+  for (let i = 0; i < 4; i++) {
+    const name = String(formData.get(`course_${i}_name`) ?? "").trim();
+    if (!name) continue;
+    const start = String(formData.get(`course_${i}_start`) ?? "").trim();
+    const end = String(formData.get(`course_${i}_end`) ?? "").trim();
+    if (!start || !end) continue;
+    courseRows.push({
+      visit_id: visit.id,
+      member_id: memberId,
+      medication_name: name,
+      dose: String(formData.get(`course_${i}_dose`) ?? "").trim(),
+      frequency: String(formData.get(`course_${i}_frequency`) ?? "").trim(),
+      treatment_start: start,
+      treatment_end: end,
+      notes: String(formData.get(`course_${i}_notes`) ?? "").trim() || null
+    });
+  }
+
+  if (courseRows.length) {
+    await supabase.from("visit_medication_courses").insert(courseRows);
+  }
+
   revalidatePath(`/members/${memberId}/health`);
+  revalidatePath("/dashboard");
 }
 
 export async function addVaccine(formData: FormData) {

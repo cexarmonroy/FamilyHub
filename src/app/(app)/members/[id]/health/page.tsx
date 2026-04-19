@@ -44,6 +44,26 @@ function visitMonthDay(iso: string) {
   };
 }
 
+type VisitMedicationCourseRow = {
+  id: string;
+  visit_id: string;
+  medication_name: string;
+  dose: string;
+  frequency: string;
+  treatment_start: string;
+  treatment_end: string;
+  notes: string | null;
+};
+
+type VisitWithCourses = Record<string, unknown> & {
+  id: string;
+  visited_at: string;
+  reason: string;
+  provider: string;
+  notes: string | null;
+  visit_medication_courses: VisitMedicationCourseRow[];
+};
+
 export default async function HealthPage({
   params
 }: {
@@ -52,15 +72,43 @@ export default async function HealthPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: member }, { data: profile }, { data: meds }, { data: visits }, { data: vaccines }, { data: metrics }] =
+  const [{ data: member }, { data: profile }, { data: meds }, { data: vaccines }, { data: metrics }] =
     await Promise.all([
       supabase.from("family_members").select("id, full_name, avatar_url").eq("id", id).single(),
       supabase.from("health_profiles").select("*").eq("member_id", id).maybeSingle(),
       supabase.from("medications").select("*").eq("member_id", id).order("created_at", { ascending: false }),
-      supabase.from("medical_visits").select("*").eq("member_id", id).order("visited_at", { ascending: false }),
       supabase.from("vaccines").select("*").eq("member_id", id).order("created_at", { ascending: false }),
       supabase.from("metrics").select("*").eq("member_id", id).order("measured_at", { ascending: false })
     ]);
+
+  const { data: visitsRaw } = await supabase
+    .from("medical_visits")
+    .select("*")
+    .eq("member_id", id)
+    .order("visited_at", { ascending: false });
+
+  const visitIds = (visitsRaw ?? []).map((v) => v.id);
+  const coursesByVisit = new Map<string, VisitMedicationCourseRow[]>();
+
+  if (visitIds.length > 0) {
+    const { data: courseRows, error: coursesErr } = await supabase
+      .from("visit_medication_courses")
+      .select("*")
+      .in("visit_id", visitIds);
+
+    if (!coursesErr && courseRows) {
+      for (const c of courseRows) {
+        const list = coursesByVisit.get(c.visit_id) ?? [];
+        list.push(c);
+        coursesByVisit.set(c.visit_id, list);
+      }
+    }
+  }
+
+  const visits: VisitWithCourses[] = (visitsRaw ?? []).map((v) => ({
+    ...v,
+    visit_medication_courses: coursesByVisit.get(v.id) ?? []
+  }));
 
   const name = member?.full_name ?? "Integrante";
   const latest = (metrics ?? [])[0];
@@ -380,25 +428,45 @@ export default async function HealthPage({
             <div className="space-y-3">
               {(visits ?? []).map((v) => {
                 const { mon, day } = visitMonthDay(v.visited_at);
+                const courses = v.visit_medication_courses;
                 return (
                   <div
                     key={v.id}
-                    className="flex cursor-default items-center justify-between gap-3 rounded-lg border border-transparent bg-white p-4 transition hover:border-fh-primary/25"
+                    className="rounded-lg border border-transparent bg-white p-4 transition hover:border-fh-primary/25"
                   >
-                    <div className="flex min-w-0 items-center gap-4">
-                      <div className="shrink-0 rounded-md bg-fh-surface-container-low px-3 py-1 text-center">
-                        <span className="block text-[10px] font-bold uppercase text-fh-on-surface-variant">{mon}</span>
-                        <span className="text-lg font-black text-fh-primary">{day}</span>
+                    <div className="flex cursor-default items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-4">
+                        <div className="shrink-0 rounded-md bg-fh-surface-container-low px-3 py-1 text-center">
+                          <span className="block text-[10px] font-bold uppercase text-fh-on-surface-variant">{mon}</span>
+                          <span className="text-lg font-black text-fh-primary">{day}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-fh-on-surface">{v.reason}</h4>
+                          <p className="text-xs text-fh-on-surface-variant">
+                            {v.provider}
+                            {v.notes ? ` · ${v.notes}` : ""}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h4 className="font-bold text-fh-on-surface">{v.reason}</h4>
-                        <p className="text-xs text-fh-on-surface-variant">
-                          {v.provider}
-                          {v.notes ? ` · ${v.notes}` : ""}
-                        </p>
-                      </div>
+                      <ChevronRight className="size-5 shrink-0 text-fh-line" aria-hidden />
                     </div>
-                    <ChevronRight className="size-5 shrink-0 text-fh-line" aria-hidden />
+                    {courses?.length ? (
+                      <ul className="mt-3 space-y-2 border-t border-fh-line-variant/15 pt-3 pl-2">
+                        {courses.map((c) => (
+                          <li
+                            key={c.id}
+                            className="flex flex-wrap items-baseline gap-x-2 text-sm text-fh-on-surface"
+                          >
+                            <Pill className="size-3.5 shrink-0 text-fh-secondary" strokeWidth={2} aria-hidden />
+                            <span className="font-semibold">{c.medication_name}</span>
+                            <span className="text-fh-on-surface-variant">
+                              {c.dose || "—"} · {c.frequency || "—"} ·{" "}
+                              {c.treatment_start} → {c.treatment_end}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                 );
               })}
@@ -406,12 +474,49 @@ export default async function HealthPage({
                 <p className="text-sm text-fh-on-surface-variant">Sin visitas registradas.</p>
               ) : null}
             </div>
-            <form action={addVisit} className="mt-4 space-y-3">
+            <form action={addVisit} className="mt-4 space-y-4">
               <input type="hidden" name="member_id" value={id} />
               <input className="input bg-white" name="visited_at" type="datetime-local" required />
               <input className="input bg-white" name="provider" placeholder="Profesional / centro" required />
               <input className="input bg-white" name="reason" placeholder="Motivo" required />
               <textarea className="input bg-white" name="notes" placeholder="Notas" />
+              <div className="rounded-xl border border-dashed border-fh-line-variant/40 bg-fh-surface-container-low/50 p-4">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-fh-on-surface-variant">
+                  Medicación en periodo fijo (opcional)
+                </p>
+                <p className="mb-3 text-xs text-fh-on-surface-variant">
+                  Indica tratamientos con fecha de inicio y fin. Puedes añadir hasta cuatro.
+                </p>
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="mb-3 grid grid-cols-1 gap-2 rounded-lg bg-white/80 p-3 last:mb-0 sm:grid-cols-2 lg:grid-cols-3"
+                  >
+                    <input
+                      className="input bg-white text-sm"
+                      name={`course_${i}_name`}
+                      placeholder="Medicamento"
+                    />
+                    <input
+                      className="input bg-white text-sm"
+                      name={`course_${i}_dose`}
+                      placeholder="Dosis"
+                    />
+                    <input
+                      className="input bg-white text-sm"
+                      name={`course_${i}_frequency`}
+                      placeholder="Frecuencia (ej. cada 8 h)"
+                    />
+                    <input className="input bg-white text-sm" name={`course_${i}_start`} type="date" />
+                    <input className="input bg-white text-sm" name={`course_${i}_end`} type="date" />
+                    <input
+                      className="input bg-white text-sm sm:col-span-2 lg:col-span-1"
+                      name={`course_${i}_notes`}
+                      placeholder="Notas del tratamiento"
+                    />
+                  </div>
+                ))}
+              </div>
               <button
                 type="submit"
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-fh-secondary py-4 text-sm font-bold text-fh-on-secondary shadow-md transition hover:opacity-95 active:scale-[0.99]"
