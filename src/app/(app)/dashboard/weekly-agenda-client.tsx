@@ -25,39 +25,40 @@ function dayShortLabel(d: Date) {
 }
 
 type Props = {
-  weekStart: string;
+  /** Primer día mostrado en la cinta (típicamente hoy): inicio de la ventana de 7 días. */
+  windowStart: string;
   events: WeekEventDTO[];
 };
 
-export function WeeklyAgendaClient({ weekStart, events }: Props) {
-  const monday = React.useMemo(() => parseLocalYmd(weekStart), [weekStart]);
-  const sunday = React.useMemo(() => addDays(monday, 6), [monday]);
+export function WeeklyAgendaClient({ windowStart, events }: Props) {
+  const firstDay = React.useMemo(() => parseLocalYmd(windowStart), [windowStart]);
+  const lastDay = React.useMemo(() => addDays(firstDay, 6), [firstDay]);
 
   const defaultKey = React.useMemo(() => {
     const today = startOfDay(new Date());
-    if (isWithinInterval(today, { start: monday, end: sunday })) {
+    if (isWithinInterval(today, { start: firstDay, end: lastDay })) {
       return toLocalDateKey(today);
     }
-    return weekStart;
-  }, [monday, sunday, weekStart]);
+    return windowStart;
+  }, [firstDay, lastDay, windowStart]);
 
   const [selected, setSelected] = React.useState(defaultKey);
 
   React.useEffect(() => {
     setSelected(defaultKey);
-  }, [defaultKey, weekStart]);
+  }, [defaultKey, windowStart]);
 
   const dayCells = React.useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => {
-        const d = addDays(monday, i);
+        const d = addDays(firstDay, i);
         return {
           key: toLocalDateKey(d),
           label: dayShortLabel(d),
           dayNum: format(d, "d", { locale: es })
         };
       }),
-    [monday]
+    [firstDay]
   );
 
   const selectedIndex = dayCells.findIndex((c) => c.key === selected);
@@ -77,7 +78,10 @@ export function WeeklyAgendaClient({ weekStart, events }: Props) {
   return (
     <section className="rounded-stitch-xl bg-fh-surface-container-low p-6 md:p-8">
       <div className="mb-6 flex items-center justify-between gap-4">
-        <h3 className="text-xl font-bold text-fh-on-surface">Agenda semanal</h3>
+        <div>
+          <h3 className="text-xl font-bold text-fh-on-surface">Próximos 7 días</h3>
+          <p className="mt-0.5 text-xs font-medium text-fh-on-surface-variant">Desde hoy · visibilidad de lo que viene</p>
+        </div>
         <div className="flex gap-1">
           <button
             type="button"
@@ -136,9 +140,9 @@ export function WeeklyAgendaClient({ weekStart, events }: Props) {
               <CalendarDays className="size-10 text-fh-line" aria-hidden />
               {weekIsEmpty ? (
                 <>
-                  <p className="text-sm font-semibold text-fh-on-surface">Semana despejada</p>
+                  <p className="text-sm font-semibold text-fh-on-surface">Sin eventos en la ventana</p>
                   <p className="max-w-sm text-sm text-fh-on-surface-variant">
-                    No hay exámenes, tareas ni vacunas en esta semana.
+                    No hay exámenes, tareas ni vacunas en los próximos 7 días.
                   </p>
                 </>
               ) : (

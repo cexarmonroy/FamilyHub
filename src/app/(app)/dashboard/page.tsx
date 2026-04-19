@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MemberAvatar } from "@/components/member-avatar";
 import { formatDistanceToNow } from "date-fns";
+import { startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowRight, ClipboardList, School, Stethoscope } from "lucide-react";
 import { MemberRelationBadge } from "@/components/member-relation-badge";
@@ -10,22 +11,18 @@ import { buildDashboardState } from "@/lib/alerts/engine";
 import type { AlertLevel } from "@/lib/alerts/types";
 import { createClient } from "@/lib/supabase/server";
 
-function toDateRange() {
-  const now = new Date();
-  const day = now.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diffToMonday);
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
-  return { monday, sunday };
+/** Ventana móvil: hoy (00:00) … hoy+6 (23:59:59), para alinear datos y cinta con “desde hoy”. */
+function toRollingSevenDayRange() {
+  const rangeStart = startOfDay(new Date());
+  const rangeEnd = new Date(rangeStart);
+  rangeEnd.setDate(rangeEnd.getDate() + 6);
+  rangeEnd.setHours(23, 59, 59, 999);
+  return { rangeStart, rangeEnd };
 }
 
 function globalStatusCopy(status: AlertLevel): { text: string; className: string } {
   if (status === "critical") return { text: "Acciones urgentes", className: "text-red-600" };
-  if (status === "warning") return { text: "Atención esta semana", className: "text-amber-600" };
+  if (status === "warning") return { text: "Atención en los próximos días", className: "text-amber-600" };
   return { text: "Todo en orden", className: "text-emerald-600" };
 }
 
@@ -37,7 +34,9 @@ function memberStatusDotClass(status: AlertLevel): string {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { monday, sunday } = toDateRange();
+  const { rangeStart, rangeEnd } = toRollingSevenDayRange();
+  const rangeStartYmd = toLocalDateKey(rangeStart);
+  const rangeEndYmd = toLocalDateKey(rangeEnd);
   const todayStr = toLocalDateKey(new Date());
 
   const [
@@ -52,21 +51,21 @@ export default async function DashboardPage() {
     supabase
       .from("school_tests")
       .select("id, member_id, subject, test_at, family_members(full_name)")
-      .gte("test_at", monday.toISOString())
-      .lte("test_at", sunday.toISOString())
+      .gte("test_at", rangeStart.toISOString())
+      .lte("test_at", rangeEnd.toISOString())
       .order("test_at", { ascending: true }),
     supabase
       .from("school_tasks")
       .select("id, member_id, title, due_at, status, family_members(full_name)")
-      .gte("due_at", monday.toISOString())
-      .lte("due_at", sunday.toISOString())
+      .gte("due_at", rangeStart.toISOString())
+      .lte("due_at", rangeEnd.toISOString())
       .order("due_at", { ascending: true }),
     supabase
       .from("vaccines")
       .select("id, member_id, vaccine_name, next_due_at, family_members(full_name)")
       .not("next_due_at", "is", null)
-      .gte("next_due_at", monday.toISOString().slice(0, 10))
-      .lte("next_due_at", sunday.toISOString().slice(0, 10))
+      .gte("next_due_at", rangeStartYmd)
+      .lte("next_due_at", rangeEndYmd)
       .order("next_due_at", { ascending: true }),
     supabase
       .from("notifications")
@@ -94,8 +93,8 @@ export default async function DashboardPage() {
   const memberRows = members ?? [];
 
   const dash = buildDashboardState({
-    monday,
-    sunday,
+    rangeStart,
+    rangeEnd,
     tests: tests ?? [],
     tasks: tasks ?? [],
     vaccines: vaccines ?? [],
@@ -115,7 +114,7 @@ export default async function DashboardPage() {
     }))
   });
 
-  const weekStart = toLocalDateKey(monday);
+  const agendaWindowStart = rangeStartYmd;
   const weeklyEventsPayload = dash.agendaEvents;
 
   const memberName = (row: { family_members: unknown }) => {
@@ -180,7 +179,7 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        <WeeklyAgendaClient weekStart={weekStart} events={weeklyEventsPayload} />
+        <WeeklyAgendaClient windowStart={agendaWindowStart} events={weeklyEventsPayload} />
 
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="rounded-stitch-lg bg-fh-surface-container-lowest p-6 shadow-ambient-soft">

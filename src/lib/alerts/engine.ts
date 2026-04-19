@@ -94,12 +94,12 @@ function parseLocalDate(ymd: string): Date {
 function levelForSchoolTest(
   testAtIso: string,
   now: Date,
-  weekStart: Date,
-  weekEnd: Date
+  windowStart: Date,
+  windowEnd: Date
 ): AlertLevel | null {
   const t = new Date(testAtIso);
   if (!isAfter(t, now)) return null;
-  if (!isWithinInterval(t, { start: weekStart, end: weekEnd })) return null;
+  if (!isWithinInterval(t, { start: windowStart, end: windowEnd })) return null;
   const h = differenceInHours(t, now);
   if (h <= 24) return "critical";
   return "warning";
@@ -109,12 +109,12 @@ function levelForTask(
   dueAtIso: string,
   status: string,
   now: Date,
-  weekStart: Date,
-  weekEnd: Date
+  windowStart: Date,
+  windowEnd: Date
 ): AlertLevel | null {
   if (status === "done") return null;
   const t = new Date(dueAtIso);
-  if (!isWithinInterval(t, { start: weekStart, end: weekEnd })) return null;
+  if (!isWithinInterval(t, { start: windowStart, end: windowEnd })) return null;
   if (!isAfter(t, now)) return "critical";
   const h = differenceInHours(t, now);
   if (h <= 24) return "critical";
@@ -185,7 +185,7 @@ function buildAgendaEvents(input: {
 function buildSummary(alerts: DashboardAlert[]): { school: string; health: string } {
   if (alerts.length === 0) {
     return {
-      school: "Semana despejada. No hay pruebas urgentes.",
+      school: "Próximos días despejados. No hay pruebas urgentes.",
       health: "Todo al día. Sin pendientes médicos destacados."
     };
   }
@@ -222,11 +222,12 @@ function groupMemberStatuses(
 
 /**
  * Reglas: `critical` ≤24 h o vencido o vacuna hoy/mañana o último día de tratamiento;
- * `warning` resto de la ventana semanal o notas/activos.
+ * `warning` resto de la ventana o notas/activos.
+ * `rangeStart` / `rangeEnd` definen el periodo (p. ej. hoy … hoy+6 días).
  */
 export function buildDashboardState(input: {
-  monday: Date;
-  sunday: Date;
+  rangeStart: Date;
+  rangeEnd: Date;
   now?: Date;
   tests: RawTest[];
   tasks: RawTask[];
@@ -236,15 +237,15 @@ export function buildDashboardState(input: {
   members: RawMember[];
 }): DashboardState {
   const now = input.now ?? new Date();
-  const weekStart = startOfDay(input.monday);
-  const weekEnd = input.sunday;
+  const windowStart = startOfDay(input.rangeStart);
+  const windowEnd = input.rangeEnd;
   const alerts: DashboardAlert[] = [];
 
   const todayKey = toLocalDateKey(now);
   const today = parseLocalDate(todayKey);
 
   for (const t of input.tests) {
-    const lvl = levelForSchoolTest(t.test_at, now, weekStart, weekEnd);
+    const lvl = levelForSchoolTest(t.test_at, now, windowStart, windowEnd);
     if (!lvl) continue;
     alerts.push({
       id: `school-test-${t.id}`,
@@ -257,7 +258,7 @@ export function buildDashboardState(input: {
   }
 
   for (const task of input.tasks) {
-    const lvl = levelForTask(task.due_at, task.status, now, weekStart, weekEnd);
+    const lvl = levelForTask(task.due_at, task.status, now, windowStart, windowEnd);
     if (!lvl) continue;
     alerts.push({
       id: `school-task-${task.id}`,
