@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { markSchoolTestRendered } from "@/lib/school/mark-test-rendered";
 
 function schoolError(memberId: string, message: string) {
   redirect(`/members/${memberId}/school?error=${encodeURIComponent(message.slice(0, 240))}`);
@@ -113,4 +114,14 @@ export async function addTask(formData: FormData) {
   });
   if (error) schoolError(memberId, error.message);
   revalidatePath(`/members/${memberId}/school`);
+}
+
+export async function markTestRendered(formData: FormData) {
+  const memberId = readMemberId(formData);
+  const testId = String(formData.get("test_id") ?? "").trim();
+  if (!memberId) redirect("/members?error=" + encodeURIComponent("Falta el integrante."));
+  if (!testId) schoolError(memberId, "Falta identificar la prueba.");
+
+  const res = await markSchoolTestRendered(testId, memberId);
+  if (!res.ok) schoolError(memberId, res.error ?? "No se pudo guardar.");
 }

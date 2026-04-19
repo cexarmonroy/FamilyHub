@@ -5,9 +5,10 @@ import { startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowRight, ClipboardList, School, Stethoscope } from "lucide-react";
 import { MemberRelationBadge } from "@/components/member-relation-badge";
+import { DashboardAlertRowsClient } from "./dashboard-alert-rows-client";
 import { WeeklyAgendaClient } from "./weekly-agenda-client";
 import { toLocalDateKey } from "@/lib/dates";
-import { buildDashboardState } from "@/lib/alerts/engine";
+import { buildDashboardState, type RawChronicMedication } from "@/lib/alerts/engine";
 import type { AlertLevel } from "@/lib/alerts/types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -34,6 +35,9 @@ function memberStatusDotClass(status: AlertLevel): string {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const {
+    data: { user: authUser }
+  } = await supabase.auth.getUser();
   const { rangeStart, rangeEnd } = toRollingSevenDayRange();
   const rangeStartYmd = toLocalDateKey(rangeStart);
   const rangeEndYmd = toLocalDateKey(rangeEnd);
@@ -46,11 +50,12 @@ export default async function DashboardPage() {
     { data: unreadNotifications },
     { data: visitCourses },
     { data: members },
-    { data: feedNotes }
+    { data: feedNotes },
+    { data: snoozeRows }
   ] = await Promise.all([
     supabase
       .from("school_tests")
-      .select("id, member_id, subject, test_at, family_members(full_name)")
+      .select("id, member_id, subject, test_at, completed_at, family_members(full_name)")
       .gte("test_at", rangeStart.toISOString())
       .lte("test_at", rangeEnd.toISOString())
       .order("test_at", { ascending: true }),
@@ -62,7 +67,7 @@ export default async function DashboardPage() {
       .order("due_at", { ascending: true }),
     supabase
       .from("vaccines")
-      .select("id, member_id, vaccine_name, next_due_at, family_members(full_name)")
+      .select("id, member_id, vaccine_name, next_due_at, applied_at, family_members(full_name)")
       .not("next_due_at", "is", null)
       .gte("next_due_at", rangeStartYmd)
       .lte("next_due_at", rangeEndYmd)
@@ -87,17 +92,64 @@ export default async function DashboardPage() {
       .from("notifications")
       .select("id, title, created_at")
       .order("created_at", { ascending: false })
-      .limit(6)
+      .limit(6),
+    authUser
+      ? supabase
+          .from("dashboard_alert_snoozes")
+          .select("alert_key")
+          .gt("snoozed_until", new Date().toISOString())
+      : Promise.resolve({ data: [] as { alert_key: string }[] })
   ]);
 
   const memberRows = members ?? [];
+  const memberIds = memberRows.map((m) => m.id);
+
+  const { data: chronicMeds } =
+    memberIds.length > 0
+      ? await supabase
+          .from("medications")
+          .select("id, member_id, name, family_members(full_name)")
+          .in("member_id", memberIds)
+          .eq("active", true)
+      : { data: [] as RawChronicMedication[] };
+
+  const chronicIds = (chronicMeds ?? []).map((m) => m.id);
+  const { data: chronicLogRows } =
+    chronicIds.length > 0
+      ? await supabase
+          .from("chronic_medication_logs")
+          .select("medication_id")
+          .in("medication_id", chronicIds)
+          .eq("logged_on", todayStr)
+      : { data: [] as { medication_id: string }[] };
+
+  const { data: chronicLogHistory } =
+    chronicIds.length > 0
+      ? await supabase.from("chronic_medication_logs").select("medication_id, logged_on").in("medication_id", chronicIds)
+      : { data: [] as { medication_id: string; logged_on: string }[] };
+
+  const chronicLastLogYmdByMedicationId: Record<string, string | null> = {};
+  for (const row of chronicLogHistory ?? []) {
+    const cur = chronicLastLogYmdByMedicationId[row.medication_id];
+    if (!cur || row.logged_on > cur) {
+      chronicLastLogYmdByMedicationId[row.medication_id] = row.logged_on;
+    }
+  }
+
+  const loggedChronic = new Set((chronicLogRows ?? []).map((r) => r.medication_id));
+  const chronicPending = (chronicMeds ?? []).filter((m) => !loggedChronic.has(m.id)) as RawChronicMedication[];
+
+  const snoozedKeys = new Set((snoozeRows ?? []).map((r) => r.alert_key));
 
   const dash = buildDashboardState({
     rangeStart,
     rangeEnd,
     tests: tests ?? [],
     tasks: tasks ?? [],
-    vaccines: vaccines ?? [],
+    vaccines: (vaccines ?? []).map((v) => ({
+      ...v,
+      applied_at: v.applied_at ?? null
+    })),
     visitCourses: visitCourses ?? [],
     notifications: (unreadNotifications ?? []).map((n) => ({
       id: n.id,
@@ -111,7 +163,10 @@ export default async function DashboardPage() {
       id: m.id,
       full_name: m.full_name,
       relation: m.relation
-    }))
+    })),
+    chronicMedicationsWithoutLogToday: chronicPending,
+    chronicLastLogYmdByMedicationId,
+    snoozedAlertKeys: snoozedKeys
   });
 
   const agendaWindowStart = rangeStartYmd;
@@ -136,6 +191,9 @@ export default async function DashboardPage() {
             <div>
               <h2 className="text-3xl font-bold tracking-tight text-fh-on-surface">Resumen de hoy</h2>
               <p className={`mt-1 text-sm font-semibold ${header.className}`}>{header.text}</p>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-fh-on-surface-variant">
+                {dash.naturalLanguageSummary}
+              </p>
             </div>
             {dash.alertCount > 0 ? (
               <span className="rounded-full bg-fh-secondary-container px-4 py-1 text-sm font-semibold text-fh-secondary">
@@ -144,28 +202,16 @@ export default async function DashboardPage() {
             ) : null}
           </div>
 
-          {dash.priorityAlerts.length > 0 ? (
-            <div className="mb-4 rounded-stitch-lg border border-red-200/80 bg-red-50/90 p-4 shadow-ambient-soft dark:border-red-900/40 dark:bg-red-950/30">
-              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-red-800 dark:text-red-200">
-                Prioritarias
-              </p>
-              <ul className="space-y-2 text-sm text-red-900 dark:text-red-100">
-                {dash.priorityAlerts.map((a) => (
-                  <li key={a.id} className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span>· {a.message}</span>
-                    {a.detailHref ? (
-                      <Link
-                        href={a.detailHref}
-                        className="shrink-0 text-xs font-semibold text-red-800 underline-offset-2 hover:underline dark:text-red-200"
-                      >
-                        Ver detalle
-                      </Link>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+          <DashboardAlertRowsClient
+            rows={dash.priorityDisplayRows}
+            variant="critical"
+            title="Prioritarias"
+          />
+          <DashboardAlertRowsClient
+            rows={dash.warningDisplayRows}
+            variant="warning"
+            title="Atención"
+          />
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex items-start gap-4 rounded-stitch-lg border-l-4 border-fh-primary bg-fh-surface-container-lowest p-6 shadow-ambient">

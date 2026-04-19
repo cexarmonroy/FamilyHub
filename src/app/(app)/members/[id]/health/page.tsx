@@ -13,12 +13,15 @@ import {
   Stethoscope,
   Syringe
 } from "lucide-react";
+import { toLocalDateKey } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import {
   addMedication,
   addMetric,
   addVaccine,
   addVisit,
+  markChronicMedicationTaken,
+  markMedicationCourseTaken,
   saveHealthProfile
 } from "./actions";
 
@@ -44,6 +47,10 @@ function visitMonthDay(iso: string) {
   };
 }
 
+function isCourseActiveOnLocalDay(startYmd: string, endYmd: string, dayYmd: string): boolean {
+  return dayYmd >= startYmd && dayYmd <= endYmd;
+}
+
 type VisitMedicationCourseRow = {
   id: string;
   visit_id: string;
@@ -65,11 +72,14 @@ type VisitWithCourses = Record<string, unknown> & {
 };
 
 export default async function HealthPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
+  const { error: actionError } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: member }, { data: profile }, { data: meds }, { data: vaccines }, { data: metrics }] =
@@ -110,11 +120,46 @@ export default async function HealthPage({
     visit_medication_courses: coursesByVisit.get(v.id) ?? []
   }));
 
+  const todayKey = toLocalDateKey(new Date());
+  const allCourseIds = Array.from(coursesByVisit.values())
+    .flat()
+    .map((c) => c.id);
+  let loggedCourseIdsToday = new Set<string>();
+  if (allCourseIds.length > 0) {
+    const { data: logRows } = await supabase
+      .from("visit_medication_course_logs")
+      .select("course_id")
+      .in("course_id", allCourseIds)
+      .eq("logged_on", todayKey);
+    loggedCourseIdsToday = new Set((logRows ?? []).map((r) => r.course_id as string));
+  }
+
+  const medicationIds = (meds ?? []).map((m) => m.id);
+  let chronicMedicationLoggedToday = new Set<string>();
+  if (medicationIds.length > 0) {
+    const { data: chronicLogRows } = await supabase
+      .from("chronic_medication_logs")
+      .select("medication_id")
+      .in("medication_id", medicationIds)
+      .eq("logged_on", todayKey);
+    chronicMedicationLoggedToday = new Set(
+      (chronicLogRows ?? []).map((r) => r.medication_id as string)
+    );
+  }
+
   const name = member?.full_name ?? "Integrante";
   const latest = (metrics ?? [])[0];
 
   return (
     <div className="pb-4">
+      {actionError ? (
+        <div
+          className="mb-6 rounded-stitch-lg border border-fh-error/30 bg-fh-error-container/15 px-4 py-3 text-sm text-fh-error"
+          role="alert"
+        >
+          <strong className="font-semibold">No se pudo guardar.</strong> {actionError}
+        </div>
+      ) : null}
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4 border-b border-fh-line-variant/15 pb-6">
         <div className="flex min-w-0 items-start gap-3 sm:gap-4">
           <Link
@@ -289,27 +334,50 @@ export default async function HealthPage({
               </a>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {(meds ?? []).map((m) => (
-                <div
-                  key={m.id}
-                  className="group flex items-start gap-4 rounded-lg bg-fh-surface-container-low p-4 transition-colors duration-300 hover:bg-fh-secondary-container/50"
-                >
-                  <div className="rounded-full bg-white p-3 text-fh-secondary shadow-sm">
-                    <Pill className="size-5" strokeWidth={2} aria-hidden />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-fh-on-surface">{m.name}</h3>
-                    <p className="text-xs text-fh-on-surface-variant">
-                      {m.dose} · {m.frequency}
-                    </p>
+              {(meds ?? []).map((m) => {
+                const chronicLogged = chronicMedicationLoggedToday.has(m.id);
+                return (
+                  <div
+                    key={m.id}
+                    className="group flex flex-col gap-3 rounded-lg bg-fh-surface-container-low p-4 transition-colors duration-300 hover:bg-fh-secondary-container/50"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="rounded-full bg-white p-3 text-fh-secondary shadow-sm">
+                        <Pill className="size-5" strokeWidth={2} aria-hidden />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-fh-on-surface">{m.name}</h3>
+                        <p className="text-xs text-fh-on-surface-variant">
+                          {m.dose} · {m.frequency}
+                        </p>
+                        {m.active ? (
+                          <span className="mt-2 inline-block rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-fh-secondary">
+                            Activa
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
                     {m.active ? (
-                      <span className="mt-2 inline-block rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-fh-secondary">
-                        Activa
-                      </span>
+                      chronicLogged ? (
+                        <span className="ml-[3.25rem] inline-flex w-fit rounded-full bg-fh-secondary-container/50 px-2 py-0.5 text-[10px] font-bold uppercase text-fh-secondary">
+                          Toma registrada hoy
+                        </span>
+                      ) : (
+                        <form action={markChronicMedicationTaken} className="ml-[3.25rem] w-fit">
+                          <input type="hidden" name="member_id" value={id} />
+                          <input type="hidden" name="medication_id" value={m.id} />
+                          <button
+                            type="submit"
+                            className="rounded-lg border border-fh-secondary/40 bg-fh-secondary-container/30 px-3 py-1.5 text-xs font-bold text-fh-secondary transition hover:bg-fh-secondary-container/50"
+                          >
+                            Registrar toma hoy
+                          </button>
+                        </form>
+                      )
                     ) : null}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {!meds?.length ? (
                 <p className="col-span-full text-sm text-fh-on-surface-variant">Sin medicación registrada.</p>
               ) : null}
@@ -452,19 +520,47 @@ export default async function HealthPage({
                     </div>
                     {courses?.length ? (
                       <ul className="mt-3 space-y-2 border-t border-fh-line-variant/15 pt-3 pl-2">
-                        {courses.map((c) => (
-                          <li
-                            key={c.id}
-                            className="flex flex-wrap items-baseline gap-x-2 text-sm text-fh-on-surface"
-                          >
-                            <Pill className="size-3.5 shrink-0 text-fh-secondary" strokeWidth={2} aria-hidden />
-                            <span className="font-semibold">{c.medication_name}</span>
-                            <span className="text-fh-on-surface-variant">
-                              {c.dose || "—"} · {c.frequency || "—"} ·{" "}
-                              {c.treatment_start} → {c.treatment_end}
-                            </span>
-                          </li>
-                        ))}
+                        {courses.map((c) => {
+                          const activeToday = isCourseActiveOnLocalDay(
+                            c.treatment_start,
+                            c.treatment_end,
+                            todayKey
+                          );
+                          const loggedToday = loggedCourseIdsToday.has(c.id);
+                          return (
+                            <li
+                              key={c.id}
+                              className="flex flex-col gap-2 border-b border-fh-line-variant/10 pb-3 text-sm text-fh-on-surface last:border-0 last:pb-0"
+                            >
+                              <div className="flex flex-wrap items-baseline gap-x-2">
+                                <Pill className="size-3.5 shrink-0 text-fh-secondary" strokeWidth={2} aria-hidden />
+                                <span className="font-semibold">{c.medication_name}</span>
+                                <span className="text-fh-on-surface-variant">
+                                  {c.dose || "—"} · {c.frequency || "—"} · {c.treatment_start} →{" "}
+                                  {c.treatment_end}
+                                </span>
+                              </div>
+                              {activeToday ? (
+                                loggedToday ? (
+                                  <span className="ml-6 inline-flex w-fit rounded-full bg-fh-secondary-container/50 px-2 py-0.5 text-[10px] font-bold uppercase text-fh-secondary">
+                                    Toma registrada hoy
+                                  </span>
+                                ) : (
+                                  <form action={markMedicationCourseTaken} className="ml-6 w-fit">
+                                    <input type="hidden" name="member_id" value={id} />
+                                    <input type="hidden" name="course_id" value={c.id} />
+                                    <button
+                                      type="submit"
+                                      className="rounded-lg border border-fh-secondary/40 bg-fh-secondary-container/30 px-3 py-1.5 text-xs font-bold text-fh-secondary transition hover:bg-fh-secondary-container/50"
+                                    >
+                                      Registrar toma hoy
+                                    </button>
+                                  </form>
+                                )
+                              ) : null}
+                            </li>
+                          );
+                        })}
                       </ul>
                     ) : null}
                   </div>

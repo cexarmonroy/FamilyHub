@@ -2,10 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { logChronicMedicationTaken } from "@/lib/health/log-chronic-medication";
+import { logVisitMedicationCourseTaken } from "@/lib/health/log-medication-course";
 import { createClient } from "@/lib/supabase/server";
 
 function readMemberId(formData: FormData): string {
   return String(formData.get("member_id") ?? "").trim();
+}
+
+function healthActionError(memberId: string, message: string) {
+  redirect(`/members/${memberId}/health?error=${encodeURIComponent(message.slice(0, 240))}`);
 }
 
 async function requireMember(formData: FormData) {
@@ -129,4 +135,24 @@ export async function addMetric(formData: FormData) {
     notes: String(formData.get("notes") ?? "") || null
   });
   revalidatePath(`/members/${memberId}/health`);
+}
+
+export async function markMedicationCourseTaken(formData: FormData) {
+  const memberId = readMemberId(formData);
+  const courseId = String(formData.get("course_id") ?? "").trim();
+  if (!memberId) redirect("/members?error=" + encodeURIComponent("Falta el integrante."));
+  if (!courseId) healthActionError(memberId, "Falta identificar el tratamiento.");
+
+  const res = await logVisitMedicationCourseTaken(courseId, memberId);
+  if (!res.ok) healthActionError(memberId, res.error);
+}
+
+export async function markChronicMedicationTaken(formData: FormData) {
+  const memberId = readMemberId(formData);
+  const medicationId = String(formData.get("medication_id") ?? "").trim();
+  if (!memberId) redirect("/members?error=" + encodeURIComponent("Falta el integrante."));
+  if (!medicationId) healthActionError(memberId, "Falta identificar la medicación.");
+
+  const res = await logChronicMedicationTaken(medicationId, memberId);
+  if (!res.ok) healthActionError(memberId, res.error);
 }

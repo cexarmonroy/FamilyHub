@@ -12,7 +12,7 @@ import {
   Receipt
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { addItem, addTask, addTest } from "./actions";
+import { addItem, addTask, addTest, markTestRendered } from "./actions";
 
 function taskStatusLabel(status: string) {
   if (status === "done") return "Completado";
@@ -188,29 +188,61 @@ export default async function SchoolPage({
               const dt = new Date(t.test_at);
               const border = idx % 2 === 0 ? "border-fh-tertiary" : "border-fh-secondary";
               const labelColor = idx % 2 === 0 ? "text-fh-tertiary" : "text-fh-secondary";
+              const rendered = Boolean(t.completed_at);
+              const renderedAt = t.completed_at ? new Date(t.completed_at) : null;
               return (
                 <div
                   key={t.id}
                   className={`relative rounded-r-lg border-l-4 ${border} bg-fh-surface-container-low p-4 pl-4`}
                 >
-                  <div className="mb-2 flex items-start justify-between gap-2">
+                  <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                     <span className={`text-[10px] font-bold uppercase tracking-wider ${labelColor}`}>{t.subject}</span>
-                    <span className="text-xs font-medium text-fh-on-surface-variant">
-                      {dt.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {rendered ? (
+                        <span className="rounded bg-fh-secondary-container/40 px-2 py-0.5 text-[9px] font-bold uppercase text-fh-secondary">
+                          Rendida
+                        </span>
+                      ) : null}
+                      <span className="text-xs font-medium text-fh-on-surface-variant">
+                        {dt.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
                   </div>
-                  <h3 className="mb-1 font-bold text-fh-on-surface">Evaluación programada</h3>
+                  <h3
+                    className={`mb-1 font-bold ${rendered ? "text-fh-on-surface-variant line-through" : "text-fh-on-surface"}`}
+                  >
+                    Evaluación programada
+                  </h3>
                   {t.notes ? (
                     <p className="mb-3 text-xs italic text-fh-on-surface-variant">&quot;{t.notes}&quot;</p>
                   ) : (
                     <p className="mb-3 text-xs text-fh-on-surface-variant">Sin notas adicionales.</p>
                   )}
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="size-3.5 text-fh-on-surface-variant" strokeWidth={2} aria-hidden />
-                    <span className="text-xs font-bold capitalize text-fh-on-surface">
-                      {dt.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}
-                    </span>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="size-3.5 text-fh-on-surface-variant" strokeWidth={2} aria-hidden />
+                      <span className="text-xs font-bold capitalize text-fh-on-surface">
+                        {dt.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}
+                      </span>
+                    </div>
+                    {rendered && renderedAt ? (
+                      <span className="text-[10px] text-fh-on-surface-variant">
+                        Marcada el {renderedAt.toLocaleDateString("es")}
+                      </span>
+                    ) : null}
                   </div>
+                  {!rendered ? (
+                    <form action={markTestRendered} className="mt-3 border-t border-fh-line-variant/10 pt-3">
+                      <input type="hidden" name="member_id" value={id} />
+                      <input type="hidden" name="test_id" value={t.id} />
+                      <button
+                        type="submit"
+                        className="w-full rounded-lg border border-fh-tertiary/40 bg-fh-tertiary-container/30 py-2 text-xs font-bold text-fh-tertiary transition hover:bg-fh-tertiary-container/50"
+                      >
+                        Marcar como rendida
+                      </button>
+                    </form>
+                  ) : null}
                 </div>
               );
             })}
