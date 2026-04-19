@@ -151,7 +151,17 @@ export default async function DashboardPage() {
               </p>
               <ul className="space-y-2 text-sm text-red-900 dark:text-red-100">
                 {dash.priorityAlerts.map((a) => (
-                  <li key={a.id}>· {a.message}</li>
+                  <li key={a.id} className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span>· {a.message}</span>
+                    {a.detailHref ? (
+                      <Link
+                        href={a.detailHref}
+                        className="shrink-0 text-xs font-semibold text-red-800 underline-offset-2 hover:underline dark:text-red-200"
+                      >
+                        Ver detalle
+                      </Link>
+                    ) : null}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -164,7 +174,18 @@ export default async function DashboardPage() {
               </div>
               <div className="min-w-0">
                 <p className="mb-1 text-xs font-bold uppercase tracking-widest text-fh-primary">Escuela</p>
-                <h3 className="text-lg font-semibold leading-snug text-fh-on-surface">{dash.summary.school}</h3>
+                <h3 className="text-lg font-semibold leading-snug text-fh-on-surface">
+                  {dash.summary.school.message}
+                </h3>
+                {dash.summary.school.detailHref ? (
+                  <Link
+                    href={dash.summary.school.detailHref}
+                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-fh-primary hover:underline"
+                  >
+                    Ver detalle
+                    <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
+                  </Link>
+                ) : null}
               </div>
             </div>
             <div className="flex items-start gap-4 rounded-stitch-lg border-l-4 border-fh-tertiary bg-fh-surface-container-lowest p-6 shadow-ambient">
@@ -173,7 +194,18 @@ export default async function DashboardPage() {
               </div>
               <div className="min-w-0">
                 <p className="mb-1 text-xs font-bold uppercase tracking-widest text-fh-tertiary">Salud</p>
-                <h3 className="text-lg font-semibold leading-snug text-fh-on-surface">{dash.summary.health}</h3>
+                <h3 className="text-lg font-semibold leading-snug text-fh-on-surface">
+                  {dash.summary.health.message}
+                </h3>
+                {dash.summary.health.detailHref ? (
+                  <Link
+                    href={dash.summary.health.detailHref}
+                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-fh-tertiary hover:underline"
+                  >
+                    Ver detalle
+                    <ArrowRight className="size-3.5" strokeWidth={2} aria-hidden />
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>

@@ -10,6 +10,8 @@ export type DashboardAlert = {
   message: string;
   memberId: string | null;
   memberName: string;
+  /** Ruta en la app para profundizar (escuela/salud del familiar o notificaciones). */
+  detailHref: string | null;
 };
 
 export type AgendaEventPayload = {
@@ -28,9 +30,14 @@ export type MemberDashboardStatus = {
   alerts: DashboardAlert[];
 };
 
+export type DashboardSummaryLine = {
+  message: string;
+  detailHref: string | null;
+};
+
 export type DashboardState = {
   globalStatus: AlertLevel;
-  summary: { school: string; health: string };
+  summary: { school: DashboardSummaryLine; health: DashboardSummaryLine };
   priorityAlerts: DashboardAlert[];
   members: MemberDashboardStatus[];
   agendaEvents: AgendaEventPayload[];

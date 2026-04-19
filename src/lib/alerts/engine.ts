@@ -152,6 +152,11 @@ function notificationLevel(eventAtIso: string, now: Date): AlertLevel {
   return "warning";
 }
 
+function memberSectionHref(domain: AlertDomain, memberId: string | null): string | null {
+  if (!memberId) return "/notifications";
+  return domain === "school" ? `/members/${memberId}/school` : `/members/${memberId}/health`;
+}
+
 function buildAgendaEvents(input: {
   tests: RawTest[];
   tasks: RawTask[];
@@ -182,11 +187,20 @@ function buildAgendaEvents(input: {
   return mapped;
 }
 
-function buildSummary(alerts: DashboardAlert[]): { school: string; health: string } {
+function buildSummary(alerts: DashboardAlert[]): {
+  school: { message: string; detailHref: string | null };
+  health: { message: string; detailHref: string | null };
+} {
   if (alerts.length === 0) {
     return {
-      school: "Próximos días despejados. No hay pruebas urgentes.",
-      health: "Todo al día. Sin pendientes médicos destacados."
+      school: {
+        message: "Próximos días despejados. No hay pruebas urgentes.",
+        detailHref: null
+      },
+      health: {
+        message: "Todo al día. Sin pendientes médicos destacados.",
+        detailHref: null
+      }
     };
   }
   const schoolAlerts = alerts
@@ -196,9 +210,16 @@ function buildSummary(alerts: DashboardAlert[]): { school: string; health: strin
     .filter((a) => a.domain === "health")
     .sort((a, b) => levelRank(b.level) - levelRank(a.level));
 
+  const topSchool = schoolAlerts[0];
+  const topHealth = healthAlerts[0];
+
   return {
-    school: schoolAlerts.length ? schoolAlerts[0]!.message : "Sin novedades escolares.",
-    health: healthAlerts.length ? healthAlerts[0]!.message : "Sin novedades de salud."
+    school: topSchool
+      ? { message: topSchool.message, detailHref: topSchool.detailHref }
+      : { message: "Sin novedades escolares.", detailHref: null },
+    health: topHealth
+      ? { message: topHealth.message, detailHref: topHealth.detailHref }
+      : { message: "Sin novedades de salud.", detailHref: null }
   };
 }
 
@@ -253,7 +274,8 @@ export function buildDashboardState(input: {
       level: lvl,
       message: `Prueba: ${t.subject} · ${memberName(t)}`,
       memberId: t.member_id,
-      memberName: memberName(t)
+      memberName: memberName(t),
+      detailHref: memberSectionHref("school", t.member_id)
     });
   }
 
@@ -266,7 +288,8 @@ export function buildDashboardState(input: {
       level: lvl,
       message: `Tarea: ${task.title} · ${memberName(task)}`,
       memberId: task.member_id,
-      memberName: memberName(task)
+      memberName: memberName(task),
+      detailHref: memberSectionHref("school", task.member_id)
     });
   }
 
@@ -280,7 +303,8 @@ export function buildDashboardState(input: {
       level: lvl,
       message: `Vacuna: ${v.vaccine_name} · ${memberName(v)}`,
       memberId: v.member_id,
-      memberName: memberName(v)
+      memberName: memberName(v),
+      detailHref: memberSectionHref("health", v.member_id)
     });
   }
 
@@ -297,7 +321,8 @@ export function buildDashboardState(input: {
         ? `Último día de ${c.medication_name} · ${name}`
         : `Tratamiento activo: ${c.medication_name} · ${name}`,
       memberId: c.member_id,
-      memberName: name
+      memberName: name,
+      detailHref: memberSectionHref("health", c.member_id)
     });
   }
 
@@ -312,7 +337,8 @@ export function buildDashboardState(input: {
       memberId: n.member_id,
       memberName: n.member_id
         ? input.members.find((m) => m.id === n.member_id)?.full_name ?? "Familiar"
-        : "Familia"
+        : "Familia",
+      detailHref: memberSectionHref(dom, n.member_id)
     });
   }
 
