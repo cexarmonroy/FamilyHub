@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import * as React from "react";
+import { Bell, GraduationCap, LayoutDashboard, Stethoscope, Users } from "lucide-react";
 import {
-  Bell,
-  GraduationCap,
-  LayoutDashboard,
-  Plus,
-  Stethoscope,
-  Users
-} from "lucide-react";
+  extractMemberIdFromPathname,
+  readStoredMemberId,
+  resolveTargetMemberId,
+  writeStoredMemberId
+} from "@/lib/member-nav-storage";
+import { MemberModuleSwitcher } from "@/components/member-module-switcher";
 import { cn } from "@/lib/utils";
+
+type NavMemberRow = { id: string; full_name: string };
 
 type NavItem = {
   href: string;
@@ -19,9 +22,9 @@ type NavItem = {
   match: (pathname: string) => boolean;
 };
 
-function buildNav(firstMemberId: string | null): NavItem[] {
-  const healthHref = firstMemberId ? `/members/${firstMemberId}/health` : "/members";
-  const schoolHref = firstMemberId ? `/members/${firstMemberId}/school` : "/members";
+function buildNav(targetMemberId: string | null): NavItem[] {
+  const healthHref = targetMemberId ? `/members/${targetMemberId}/health` : "/members";
+  const schoolHref = targetMemberId ? `/members/${targetMemberId}/school` : "/members";
 
   return [
     {
@@ -54,25 +57,53 @@ function buildNav(firstMemberId: string | null): NavItem[] {
 export function AppChrome({
   children,
   unreadNotifications,
-  firstMemberId
+  members
 }: {
   children: React.ReactNode;
   unreadNotifications: number;
-  firstMemberId: string | null;
+  members: NavMemberRow[];
 }) {
   const pathname = usePathname();
-  const nav = buildNav(firstMemberId);
+  const validIds = React.useMemo(() => new Set(members.map((m) => m.id)), [members]);
+  const fallbackFirstId = members[0]?.id ?? null;
+
+  const [storedMemberId, setStoredMemberId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setStoredMemberId(readStoredMemberId());
+  }, []);
+
+  React.useEffect(() => {
+    const fromPath = extractMemberIdFromPathname(pathname);
+    if (fromPath && validIds.has(fromPath)) {
+      writeStoredMemberId(fromPath);
+      setStoredMemberId(fromPath);
+    }
+  }, [pathname, validIds]);
+
+  const targetMemberId = React.useMemo(
+    () =>
+      resolveTargetMemberId({
+        pathname,
+        storedId: storedMemberId,
+        validIds,
+        fallbackFirstId
+      }),
+    [pathname, storedMemberId, validIds, fallbackFirstId]
+  );
+
+  const nav = buildNav(targetMemberId);
 
   return (
     <div className="min-h-screen bg-fh-surface text-fh-on-surface antialiased">
-      <header className="fixed top-0 z-50 flex w-full items-center justify-between border-b border-fh-line-variant/15 bg-fh-surface/80 px-4 py-3 shadow-ambient backdrop-blur-xl sm:px-6 sm:py-4">
-        <div className="flex min-w-0 items-center gap-6 md:gap-8">
+      <header className="fixed top-0 z-50 flex w-full items-center justify-between gap-2 border-b border-fh-line-variant/15 bg-fh-surface/80 px-4 py-3 shadow-ambient backdrop-blur-xl sm:px-6 sm:py-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-8">
           <Link href="/dashboard" className="shrink-0">
             <span className="bg-gradient-to-r from-fh-primary to-fh-primary-dim bg-clip-text text-xl font-bold tracking-tight text-transparent sm:text-2xl">
               FamilyHub
             </span>
           </Link>
-          <nav className="hidden items-center gap-1 md:flex md:gap-2">
+          <nav className="hidden min-w-0 items-center gap-1 md:flex md:gap-2">
             {nav.map((item) => {
               const active = item.match(pathname);
               const Icon = item.icon;
@@ -94,7 +125,8 @@ export function AppChrome({
             })}
           </nav>
         </div>
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <MemberModuleSwitcher members={members} />
           <Link
             href="/notifications"
             className="relative rounded-full p-2 text-fh-on-surface-variant transition hover:bg-fh-surface-container-low hover:text-fh-on-surface"
@@ -136,14 +168,6 @@ export function AppChrome({
           );
         })}
       </nav>
-
-      <Link
-        href="/members"
-        className="fixed bottom-24 right-5 z-40 flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-fh-primary to-fh-primary-dim text-fh-on-primary shadow-lg shadow-fh-primary/25 transition active:scale-95 md:bottom-8"
-        aria-label="Añadir o gestionar familiares"
-      >
-        <Plus className="size-7" strokeWidth={2.5} />
-      </Link>
     </div>
   );
 }

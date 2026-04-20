@@ -14,16 +14,18 @@ export default async function AppLayout({
 
   if (!user) redirect("/login");
 
-  const [{ count }, { data: firstMember }] = await Promise.all([
+  const [{ count }, { data: memberRows }] = await Promise.all([
     supabase
       .from("notifications")
       .select("*", { count: "exact", head: true })
       .is("read_at", null),
-    supabase.from("family_members").select("id").order("full_name", { ascending: true }).limit(1).maybeSingle()
+    supabase.from("family_members").select("id, full_name").order("full_name", { ascending: true })
   ]);
 
+  const members = memberRows ?? [];
+
   return (
-    <AppChrome unreadNotifications={count ?? 0} firstMemberId={firstMember?.id ?? null}>
+    <AppChrome unreadNotifications={count ?? 0} members={members}>
       {children}
     </AppChrome>
   );
