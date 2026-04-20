@@ -180,12 +180,14 @@ function buildAgendaEvents(input: {
       .map((item) => ({
         id: `test-${item.id}`,
         title: `Prueba: ${item.subject}`,
+        memberName: memberName(item),
         at: new Date(item.test_at).toISOString(),
         tone: "border border-fh-primary-container/35 bg-fh-primary-container/20 text-fh-on-background"
       })),
     ...tasks.map((item) => ({
       id: `task-${item.id}`,
       title: `Tarea: ${item.title}`,
+      memberName: memberName(item),
       at: new Date(item.due_at).toISOString(),
       tone: "border border-fh-secondary/25 bg-fh-secondary-container/40 text-fh-on-background"
     })),
@@ -194,6 +196,7 @@ function buildAgendaEvents(input: {
       .map((item) => ({
         id: `vac-${item.id}`,
         title: `Vacuna: ${item.vaccine_name}`,
+        memberName: memberName(item),
         at: new Date(`${item.next_due_at}T09:00:00`).toISOString(),
         tone: "border border-fh-tertiary-container/50 bg-fh-tertiary-container/25 text-fh-on-background"
       }))

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatAppDateTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { markAsRead } from "./actions";
 
@@ -25,7 +26,7 @@ export default async function NotificationsPage() {
           >
             <p className="font-semibold text-fh-on-surface">{n.title}</p>
             <p className="mt-1 text-sm text-fh-on-surface-variant">{n.body}</p>
-            <p className="mt-2 text-xs text-fh-line">{new Date(n.event_at).toLocaleString("es")}</p>
+            <p className="mt-2 text-xs text-fh-line">{formatAppDateTime(n.event_at)}</p>
             {!n.read_at ? (
               <form action={markAsRead} className="mt-3">
                 <input type="hidden" name="notification_id" value={n.id} />

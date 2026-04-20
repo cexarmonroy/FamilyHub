@@ -13,7 +13,7 @@ import {
   Stethoscope,
   Syringe
 } from "lucide-react";
-import { toLocalDateKey } from "@/lib/dates";
+import { APP_TIMEZONE, toLocalDateKey } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import {
   addMedication,
@@ -42,8 +42,8 @@ function vaccineStatus(v: {
 function visitMonthDay(iso: string) {
   const d = new Date(iso);
   return {
-    mon: d.toLocaleString("es", { month: "short" }).replace(".", ""),
-    day: d.getDate().toString()
+    mon: d.toLocaleString("es", { month: "short", timeZone: APP_TIMEZONE }).replace(".", ""),
+    day: d.toLocaleString("es", { day: "numeric", timeZone: APP_TIMEZONE })
   };
 }
 

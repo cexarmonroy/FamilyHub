@@ -87,6 +87,8 @@ export type DashboardAlert = {
 export type AgendaEventPayload = {
   id: string;
   title: string;
+  /** Familiar al que aplica el evento (prueba, tarea o vacuna). */
+  memberName: string;
   at: string;
   tone: string;
 };

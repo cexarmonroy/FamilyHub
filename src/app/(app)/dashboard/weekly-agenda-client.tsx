@@ -5,11 +5,12 @@ import { addDays, format, isWithinInterval, parse, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toLocalDateKey } from "@/lib/dates";
+import { formatAppDateTime, toLocalDateKey } from "@/lib/dates";
 
 export type WeekEventDTO = {
   id: string;
   title: string;
+  memberName: string;
   at: string;
   tone: string;
 };
@@ -132,7 +133,8 @@ export function WeeklyAgendaClient({ windowStart, events }: Props) {
           {filtered.map((event) => (
             <div key={event.id} className={cn("rounded-xl p-3 text-sm", event.tone)}>
               <p className="font-semibold">{event.title}</p>
-              <p className="mt-0.5 text-xs opacity-85">{new Date(event.at).toLocaleString("es")}</p>
+              <p className="mt-0.5 text-xs font-medium opacity-90">{event.memberName}</p>
+              <p className="mt-0.5 text-xs opacity-85">{formatAppDateTime(event.at)}</p>
             </div>
           ))}
           {dayIsEmpty ? (

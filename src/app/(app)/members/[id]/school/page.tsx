@@ -11,6 +11,7 @@ import {
   Plus,
   Receipt
 } from "lucide-react";
+import { formatAppDate, formatAppTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { addItem, addTask, addTest, markTestRendered } from "./actions";
 
@@ -125,7 +126,7 @@ export default async function SchoolPage({
                     <CalendarDays className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
                     <span>
                       {i.due_at
-                        ? `Entrega: ${new Date(i.due_at + "T12:00:00").toLocaleDateString("es", {
+                        ? `Entrega: ${formatAppDate(i.due_at + "T12:00:00", {
                             day: "numeric",
                             month: "short"
                           })}`
@@ -204,7 +205,7 @@ export default async function SchoolPage({
                         </span>
                       ) : null}
                       <span className="text-xs font-medium text-fh-on-surface-variant">
-                        {dt.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}
+                        {formatAppTime(dt)}
                       </span>
                     </div>
                   </div>
@@ -222,12 +223,12 @@ export default async function SchoolPage({
                     <div className="flex items-center gap-2">
                       <CalendarDays className="size-3.5 text-fh-on-surface-variant" strokeWidth={2} aria-hidden />
                       <span className="text-xs font-bold capitalize text-fh-on-surface">
-                        {dt.toLocaleDateString("es", { weekday: "long", day: "numeric", month: "long" })}
+                        {formatAppDate(dt, { weekday: "long", day: "numeric", month: "long" })}
                       </span>
                     </div>
                     {rendered && renderedAt ? (
                       <span className="text-[10px] text-fh-on-surface-variant">
-                        Marcada el {renderedAt.toLocaleDateString("es")}
+                        Marcada el {formatAppDate(renderedAt)}
                       </span>
                     ) : null}
                   </div>
@@ -324,7 +325,7 @@ export default async function SchoolPage({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-xs text-fh-on-surface-variant">
                         Entrega:{" "}
-                        {new Date(t.due_at).toLocaleDateString("es", { day: "numeric", month: "short" })}
+                        {formatAppDate(t.due_at, { day: "numeric", month: "short" })}
                       </span>
                       <span
                         className={`text-[10px] font-bold uppercase ${

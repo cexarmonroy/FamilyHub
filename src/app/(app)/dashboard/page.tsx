@@ -7,7 +7,7 @@ import { ArrowRight, ClipboardList, School, Stethoscope } from "lucide-react";
 import { MemberRelationBadge } from "@/components/member-relation-badge";
 import { DashboardAlertRowsClient } from "./dashboard-alert-rows-client";
 import { WeeklyAgendaClient } from "./weekly-agenda-client";
-import { toLocalDateKey } from "@/lib/dates";
+import { formatAppDate, toLocalDateKey } from "@/lib/dates";
 import { buildDashboardState, type RawChronicMedication } from "@/lib/alerts/engine";
 import type { AlertLevel } from "@/lib/alerts/types";
 import { createClient } from "@/lib/supabase/server";
@@ -313,7 +313,7 @@ export default async function DashboardPage() {
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-fh-on-surface">{t.title}</p>
                         <p className="text-xs text-fh-on-surface-variant">
-                          {memberName(t)} · {new Date(t.due_at).toLocaleDateString("es")}
+                          {memberName(t)} · {formatAppDate(t.due_at)}
                         </p>
                       </div>
                     </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MemberAvatar } from "@/components/member-avatar";
+import { formatAppDateTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 
 function getAge(birthDate: string | null) {
@@ -154,7 +155,7 @@ export default async function MemberDetailPage({
           <h3 className="font-bold text-fh-on-surface">Próximas pruebas</h3>
           {(tests ?? []).map((t) => (
             <p key={t.id} className="text-sm">
-              {new Date(t.test_at).toLocaleString()} · {t.subject}
+              {formatAppDateTime(t.test_at)} · {t.subject}
             </p>
           ))}
           {!tests?.length ? (
@@ -166,7 +167,7 @@ export default async function MemberDetailPage({
           <h3 className="font-bold text-fh-on-surface">Tareas pendientes</h3>
           {(tasks ?? []).map((t) => (
             <p key={t.id} className="text-sm">
-              {new Date(t.due_at).toLocaleString()} · {t.title} ({t.status})
+              {formatAppDateTime(t.due_at)} · {t.title} ({t.status})
             </p>
           ))}
           {!tasks?.length ? (
