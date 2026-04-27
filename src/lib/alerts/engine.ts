@@ -361,24 +361,17 @@ function buildDisplayRows(alerts: DashboardAlert[]): DashboardAlertDisplayRow[] 
   );
 }
 
-function buildNaturalLanguageSummary(alerts: DashboardAlert[]): string {
-  if (alerts.length === 0) {
-    return "Todo despejado: no tienes pendientes destacados para hoy.";
-  }
-  let tests = 0;
-  let tasks = 0;
-  let vaccines = 0;
-  let chronic = 0;
-  let visitMed = 0;
-  let notifs = 0;
-  for (const a of alerts) {
-    if (a.id.startsWith("school-test-")) tests += 1;
-    else if (a.id.startsWith("school-task-")) tasks += 1;
-    else if (a.id.startsWith("health-vac-")) vaccines += 1;
-    else if (a.id.startsWith("health-chronic-med-")) chronic += 1;
-    else if (a.id.startsWith("health-course-")) visitMed += 1;
-    else if (a.id.startsWith("notif-")) notifs += 1;
-  }
+type SummaryCounts = {
+  tests: number;
+  tasks: number;
+  vaccines: number;
+  chronic: number;
+  visitMed: number;
+  notifs: number;
+};
+
+function summaryPartsFromCounts(counts: SummaryCounts): string[] {
+  const { tests, tasks, vaccines, chronic, visitMed, notifs } = counts;
   const parts: string[] = [];
   if (tests === 1) parts.push("1 prueba escolar importante");
   else if (tests > 1) parts.push(`${tests} pruebas escolares`);
@@ -392,13 +385,114 @@ function buildNaturalLanguageSummary(alerts: DashboardAlert[]): string {
   else if (visitMed > 1) parts.push(`${visitMed} medicamentos por registrar de receta médica`);
   if (notifs === 1) parts.push("1 notificación sin leer");
   else if (notifs > 1) parts.push(`${notifs} notificaciones sin leer`);
+  return parts;
+}
 
-  if (parts.length === 0) {
+function sentenceFromParts(prefix: string, parts: string[]): string {
+  if (parts.length === 0) return prefix + "sin pendientes destacados.";
+  if (parts.length === 1) return `${prefix}${parts[0]}.`;
+  const last = parts[parts.length - 1]!;
+  return `${prefix}${parts.slice(0, -1).join(", ")} y ${last}.`;
+}
+
+function countsFromAlerts(alerts: DashboardAlert[]): SummaryCounts {
+  const counts: SummaryCounts = {
+    tests: 0,
+    tasks: 0,
+    vaccines: 0,
+    chronic: 0,
+    visitMed: 0,
+    notifs: 0
+  };
+  for (const a of alerts) {
+    if (a.id.startsWith("school-test-")) counts.tests += 1;
+    else if (a.id.startsWith("school-task-")) counts.tasks += 1;
+    else if (a.id.startsWith("health-vac-")) counts.vaccines += 1;
+    else if (a.id.startsWith("health-chronic-med-")) counts.chronic += 1;
+    else if (a.id.startsWith("health-course-")) counts.visitMed += 1;
+    else if (a.id.startsWith("notif-")) counts.notifs += 1;
+  }
+  return counts;
+}
+
+function countsFromTodayInput(input: {
+  tests: RawTest[];
+  tasks: RawTask[];
+  vaccines: RawVaccine[];
+  visitCourses: RawVisitCourse[];
+  notifications: RawNotification[];
+  chronicMedicationsWithoutLogToday: RawChronicMedication[];
+  todayKey: string;
+}): SummaryCounts {
+  const { tests, tasks, vaccines, visitCourses, notifications, chronicMedicationsWithoutLogToday, todayKey } = input;
+  return {
+    tests: tests.filter((t) => !t.completed_at && toLocalDateKey(new Date(t.test_at)) === todayKey).length,
+    tasks: tasks.filter((t) => t.status !== "done" && toLocalDateKey(new Date(t.due_at)) === todayKey).length,
+    vaccines: vaccines.filter((v) => {
+      if (!v.next_due_at) return false;
+      if (v.applied_at && v.applied_at >= v.next_due_at) return false;
+      return v.next_due_at === todayKey;
+    }).length,
+    chronic: chronicMedicationsWithoutLogToday.length,
+    visitMed: visitCourses.filter((c) => todayKey >= c.treatment_start && todayKey <= c.treatment_end).length,
+    notifs: notifications.filter((n) => toLocalDateKey(new Date(n.event_at)) === todayKey).length
+  };
+}
+
+function sameCounts(a: SummaryCounts, b: SummaryCounts): boolean {
+  return (
+    a.tests === b.tests &&
+    a.tasks === b.tasks &&
+    a.vaccines === b.vaccines &&
+    a.chronic === b.chronic &&
+    a.visitMed === b.visitMed &&
+    a.notifs === b.notifs
+  );
+}
+
+function buildNaturalLanguageSummary(input: {
+  alerts: DashboardAlert[];
+  tests: RawTest[];
+  tasks: RawTask[];
+  vaccines: RawVaccine[];
+  visitCourses: RawVisitCourse[];
+  notifications: RawNotification[];
+  chronicMedicationsWithoutLogToday: RawChronicMedication[];
+  todayKey: string;
+}): string {
+  if (input.alerts.length === 0) {
+    return "Todo despejado: no tienes pendientes destacados para hoy.";
+  }
+
+  const windowCounts = countsFromAlerts(input.alerts);
+  const todayCounts = countsFromTodayInput({
+    tests: input.tests,
+    tasks: input.tasks,
+    vaccines: input.vaccines,
+    visitCourses: input.visitCourses,
+    notifications: input.notifications,
+    chronicMedicationsWithoutLogToday: input.chronicMedicationsWithoutLogToday,
+    todayKey: input.todayKey
+  });
+  const todayParts = summaryPartsFromCounts(todayCounts);
+  const windowParts = summaryPartsFromCounts(windowCounts);
+
+  if (windowParts.length === 0) {
     return "Tienes avisos activos; revisa las listas de abajo.";
   }
-  if (parts.length === 1) return `Hoy tienes ${parts[0]}.`;
-  const last = parts.pop()!;
-  return `Hoy tienes ${parts.join(", ")} y ${last}.`;
+
+  if (todayParts.length === 0) {
+    return `Hoy no tienes pendientes urgentes. ${sentenceFromParts("Para los próximos días tienes ", windowParts)}`;
+  }
+
+  if (sameCounts(todayCounts, windowCounts)) {
+    return sentenceFromParts("Hoy tienes ", todayParts);
+  }
+
+  return `${sentenceFromParts("Hoy tienes ", todayParts)} ${sentenceFromParts(
+    "Para los próximos días tienes ",
+    windowParts
+  )}`;
 }
 
 export function buildDashboardState(input: {
@@ -590,7 +684,16 @@ export function buildDashboardState(input: {
 
   const globalStatus = worstLevel(alerts.map((a) => a.level));
   const summary = buildSummary(alerts);
-  const naturalLanguageSummary = buildNaturalLanguageSummary(alerts);
+  const naturalLanguageSummary = buildNaturalLanguageSummary({
+    alerts,
+    tests: input.tests,
+    tasks: input.tasks,
+    vaccines: input.vaccines,
+    visitCourses: input.visitCourses,
+    notifications: input.notifications,
+    chronicMedicationsWithoutLogToday: input.chronicMedicationsWithoutLogToday,
+    todayKey
+  });
 
   const criticalList = alerts
     .filter((a) => a.level === "critical")

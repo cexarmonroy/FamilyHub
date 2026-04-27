@@ -181,7 +181,22 @@ export default async function DashboardPage() {
     return o?.full_name?.trim() || "Familiar";
   };
 
-  const upcomingHealthRows = (vaccines ?? []).slice(0, 2);
+  const upcomingHealthRows = [
+    ...((vaccines ?? []).map((v) => ({
+      id: `vac-${v.id}`,
+      title: `Vacuna: ${v.vaccine_name}`,
+      detail: `${memberName(v)} · ${v.next_due_at}`,
+      sortKey: v.next_due_at ?? "9999-12-31"
+    })) ?? []),
+    ...((visitCourses ?? []).map((c) => ({
+      id: `course-${c.id}`,
+      title: `Tratamiento: ${c.medication_name}`,
+      detail: `${memberName(c)} · hasta ${c.treatment_end}`,
+      sortKey: c.treatment_end
+    })) ?? [])
+  ]
+    .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+    .slice(0, 3);
   const upcomingTasksRows = (tasks ?? []).filter((t) => t.status !== "done").slice(0, 2);
 
   const header = globalStatusCopy(dash.globalStatus);
@@ -192,7 +207,7 @@ export default async function DashboardPage() {
         <section>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-fh-on-surface">Resumen de hoy</h2>
+              <h2 className="text-3xl font-bold tracking-tight text-fh-on-surface">Resumen familiar</h2>
               <p className={`mt-1 text-sm font-semibold ${header.className}`}>{header.text}</p>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-fh-on-surface-variant">
                 {dash.naturalLanguageSummary}
@@ -268,26 +283,26 @@ export default async function DashboardPage() {
               <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-fh-secondary-container text-fh-secondary">
                 <Stethoscope className="size-5" strokeWidth={2} />
               </div>
-              <h4 className="text-lg font-bold text-fh-on-surface">Salud próxima</h4>
+              <h4 className="text-lg font-bold text-fh-on-surface">Salud en seguimiento</h4>
             </div>
             <div className="space-y-3">
               {upcomingHealthRows.length ? (
-                upcomingHealthRows.map((v) => (
+                upcomingHealthRows.map((h) => (
                   <div
-                    key={v.id}
+                    key={h.id}
                     className="flex items-center justify-between gap-2 rounded-xl bg-fh-surface-container-low p-3"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-fh-on-surface">
-                        {v.vaccine_name} · {memberName(v)}
-                      </p>
-                      <p className="text-xs text-fh-on-surface-variant">{v.next_due_at}</p>
+                      <p className="text-sm font-bold text-fh-on-surface">{h.title}</p>
+                      <p className="text-xs text-fh-on-surface-variant">{h.detail}</p>
                     </div>
                     <ArrowRight className="size-4 shrink-0 text-fh-line" strokeWidth={2} aria-hidden />
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-fh-on-surface-variant">Sin vacunas programadas en la semana.</p>
+                <p className="text-sm text-fh-on-surface-variant">
+                  Sin pendientes de salud destacados para los próximos días.
+                </p>
               )}
             </div>
           </div>
