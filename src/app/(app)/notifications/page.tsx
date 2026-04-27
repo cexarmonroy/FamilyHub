@@ -3,7 +3,12 @@ import { formatAppDateTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { markAsRead } from "./actions";
 
-export default async function NotificationsPage() {
+export default async function NotificationsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const params = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase
     .from("notifications")
@@ -12,6 +17,11 @@ export default async function NotificationsPage() {
 
   return (
     <main className="rounded-stitch-xl bg-fh-surface-container-lowest p-6 shadow-ambient-soft md:p-8">
+      {params.error ? (
+        <p className="mb-4 rounded-stitch border border-fh-error/30 bg-fh-surface-container-low p-3 text-sm text-fh-error">
+          {params.error}
+        </p>
+      ) : null}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight text-fh-on-surface">Notificaciones</h2>
         <Link href="/dashboard" className="text-sm font-semibold text-fh-primary hover:underline">

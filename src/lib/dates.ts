@@ -7,6 +7,13 @@ export const APP_TIMEZONE =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_APP_TIMEZONE?.trim()) ||
   "America/Santiago";
 
+const ymdFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: APP_TIMEZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit"
+});
+
 /** Fecha y hora legibles en la zona de la app (no la del host del servidor). */
 export function formatAppDateTime(iso: string | Date): string {
   const d = typeof iso === "string" ? new Date(iso) : iso;
@@ -38,8 +45,9 @@ export function formatAppTime(iso: string | Date): string {
 
 /** Fecha local en formato yyyy-MM-dd (sin depender de UTC). */
 export function toLocalDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  const parts = ymdFormatter.formatToParts(d);
+  const year = parts.find((p) => p.type === "year")?.value ?? "";
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  const day = parts.find((p) => p.type === "day")?.value ?? "";
+  return `${year}-${month}-${day}`;
 }

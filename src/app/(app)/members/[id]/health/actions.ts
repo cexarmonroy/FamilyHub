@@ -34,26 +34,39 @@ async function requireMember(formData: FormData) {
   return { memberId, supabase };
 }
 
+function throwOnMutationError(memberId: string, error: { message: string } | null, fallback: string) {
+  if (error) healthActionError(memberId, error.message || fallback);
+}
+
 export async function saveHealthProfile(formData: FormData) {
   const { memberId, supabase } = await requireMember(formData);
-  await supabase.from("health_profiles").upsert({
+  const { error } = await supabase.from("health_profiles").upsert({
     member_id: memberId,
     blood_type: String(formData.get("blood_type") ?? "") || null,
     known_conditions: String(formData.get("known_conditions") ?? "") || null,
     allergies: String(formData.get("allergies") ?? "") || null
   });
+  throwOnMutationError(memberId, error, "No se pudo actualizar la ficha clínica.");
   revalidatePath(`/members/${memberId}/health`);
 }
 
 export async function addMedication(formData: FormData) {
   const { memberId, supabase } = await requireMember(formData);
-  await supabase.from("medications").insert({
+  const name = String(formData.get("name") ?? "").trim();
+  const dose = String(formData.get("dose") ?? "").trim();
+  const frequency = String(formData.get("frequency") ?? "").trim();
+  if (!name || !dose || !frequency) {
+    healthActionError(memberId, "Completa nombre, dosis y frecuencia.");
+  }
+
+  const { error } = await supabase.from("medications").insert({
     member_id: memberId,
-    name: String(formData.get("name") ?? ""),
-    dose: String(formData.get("dose") ?? ""),
-    frequency: String(formData.get("frequency") ?? ""),
+    name,
+    dose,
+    frequency,
     active: true
   });
+  throwOnMutationError(memberId, error, "No se pudo agregar la medicación.");
   revalidatePath(`/members/${memberId}/health`);
 }
 
@@ -106,7 +119,8 @@ export async function addVisit(formData: FormData) {
   }
 
   if (courseRows.length) {
-    await supabase.from("visit_medication_courses").insert(courseRows);
+    const { error: coursesError } = await supabase.from("visit_medication_courses").insert(courseRows);
+    throwOnMutationError(memberId, coursesError, "No se pudieron guardar los tratamientos.");
   }
 
   revalidatePath(`/members/${memberId}/health`);
@@ -115,25 +129,38 @@ export async function addVisit(formData: FormData) {
 
 export async function addVaccine(formData: FormData) {
   const { memberId, supabase } = await requireMember(formData);
-  await supabase.from("vaccines").insert({
+  const vaccineName = String(formData.get("vaccine_name") ?? "").trim();
+  if (!vaccineName) {
+    healthActionError(memberId, "Indica el nombre de la vacuna.");
+  }
+
+  const { error } = await supabase.from("vaccines").insert({
     member_id: memberId,
-    vaccine_name: String(formData.get("vaccine_name") ?? ""),
+    vaccine_name: vaccineName,
     applied_at: String(formData.get("applied_at") ?? "") || null,
     next_due_at: String(formData.get("next_due_at") ?? "") || null,
     notes: String(formData.get("notes") ?? "") || null
   });
+  throwOnMutationError(memberId, error, "No se pudo agregar la vacuna.");
   revalidatePath(`/members/${memberId}/health`);
 }
 
 export async function addMetric(formData: FormData) {
   const { memberId, supabase } = await requireMember(formData);
-  await supabase.from("metrics").insert({
+  const weight = Number(formData.get("weight_kg") ?? 0);
+  const height = Number(formData.get("height_cm") ?? 0);
+  if (!Number.isFinite(weight) || !Number.isFinite(height) || weight <= 0 || height <= 0) {
+    healthActionError(memberId, "Peso y estatura deben ser valores mayores que cero.");
+  }
+
+  const { error } = await supabase.from("metrics").insert({
     member_id: memberId,
     measured_at: String(formData.get("measured_at") ?? new Date().toISOString()),
-    weight_kg: Number(formData.get("weight_kg") ?? 0),
-    height_cm: Number(formData.get("height_cm") ?? 0),
+    weight_kg: weight,
+    height_cm: height,
     notes: String(formData.get("notes") ?? "") || null
   });
+  throwOnMutationError(memberId, error, "No se pudo agregar la métrica.");
   revalidatePath(`/members/${memberId}/health`);
 }
 

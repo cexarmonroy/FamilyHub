@@ -125,14 +125,17 @@ export default async function DashboardPage() {
 
   const { data: chronicLogHistory } =
     chronicIds.length > 0
-      ? await supabase.from("chronic_medication_logs").select("medication_id, logged_on").in("medication_id", chronicIds)
-      : { data: [] as { medication_id: string; logged_on: string }[] };
+      ? await supabase.rpc("get_chronic_medications_last_log", {
+          p_medication_ids: chronicIds
+        })
+      : { data: [] as { medication_id: string; last_logged_on: string | null }[] };
 
   const chronicLastLogYmdByMedicationId: Record<string, string | null> = {};
-  for (const row of chronicLogHistory ?? []) {
+  for (const row of (chronicLogHistory ?? []) as { medication_id: string; last_logged_on: string | null }[]) {
+    const loggedOn = row.last_logged_on ?? null;
     const cur = chronicLastLogYmdByMedicationId[row.medication_id];
-    if (!cur || row.logged_on > cur) {
-      chronicLastLogYmdByMedicationId[row.medication_id] = row.logged_on;
+    if (!cur || (loggedOn && loggedOn > cur)) {
+      chronicLastLogYmdByMedicationId[row.medication_id] = loggedOn;
     }
   }
 
