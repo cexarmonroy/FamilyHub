@@ -513,7 +513,7 @@ export function buildDashboardState(input: {
   snoozedAlertKeys?: ReadonlySet<string>;
 }): DashboardState {
   const now = input.now ?? new Date();
-  const windowStart = startOfDay(input.rangeStart);
+  const windowStart = input.rangeStart;
   const windowEnd = input.rangeEnd;
   const rawAlerts: DashboardAlert[] = [];
 

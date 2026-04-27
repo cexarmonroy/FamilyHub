@@ -1,3 +1,5 @@
+import { toDate } from "date-fns-tz";
+
 /**
  * Zona IANA para mostrar fechas/horas en la UI.
  * En el servidor (p. ej. Vercel) el huso por defecto suele ser UTC y `toLocaleString()` sin timeZone
@@ -50,4 +52,40 @@ export function toLocalDateKey(d: Date): string {
   const month = parts.find((p) => p.type === "month")?.value ?? "";
   const day = parts.find((p) => p.type === "day")?.value ?? "";
   return `${year}-${month}-${day}`;
+}
+
+/** Suma días al calendario gregoriano para una clave `yyyy-MM-dd` (sin ambigüedad de huso). */
+export function addCalendarDaysToYmd(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const u = new Date(Date.UTC(y, m - 1, d + days));
+  const mm = String(u.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(u.getUTCDate()).padStart(2, "0");
+  return `${u.getUTCFullYear()}-${mm}-${dd}`;
+}
+
+/** Inicio del día civil `ymd` en `APP_TIMEZONE` (instante UTC). Útil en SSR donde `startOfDay` sería UTC. */
+export function startOfAppZonedDay(ymd: string): Date {
+  return toDate(`${ymd}T00:00:00`, { timeZone: APP_TIMEZONE });
+}
+
+/** Fin del día civil `ymd` en `APP_TIMEZONE` (instante UTC). */
+export function endOfAppZonedDay(ymd: string): Date {
+  return toDate(`${ymd}T23:59:59.999`, { timeZone: APP_TIMEZONE });
+}
+
+/** Ventana móvil de 7 días: hoy … hoy+6 en la zona de la app (coherente en Vercel y en local). */
+export function rollingSevenDayRangeAppTz(now = new Date()): {
+  rangeStart: Date;
+  rangeEnd: Date;
+  rangeStartYmd: string;
+  rangeEndYmd: string;
+} {
+  const rangeStartYmd = toLocalDateKey(now);
+  const rangeEndYmd = addCalendarDaysToYmd(rangeStartYmd, 6);
+  return {
+    rangeStart: startOfAppZonedDay(rangeStartYmd),
+    rangeEnd: endOfAppZonedDay(rangeEndYmd),
+    rangeStartYmd,
+    rangeEndYmd
+  };
 }

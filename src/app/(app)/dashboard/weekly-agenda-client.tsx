@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { addDays, format, isWithinInterval, parse, startOfDay } from "date-fns";
+import { addDays, format, parse, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,15 +33,14 @@ type Props = {
 
 export function WeeklyAgendaClient({ windowStart, events }: Props) {
   const firstDay = React.useMemo(() => parseLocalYmd(windowStart), [windowStart]);
-  const lastDay = React.useMemo(() => addDays(firstDay, 6), [firstDay]);
 
   const defaultKey = React.useMemo(() => {
-    const today = startOfDay(new Date());
-    if (isWithinInterval(today, { start: firstDay, end: lastDay })) {
-      return toLocalDateKey(today);
+    const todayKey = toLocalDateKey(new Date());
+    for (let i = 0; i < 7; i++) {
+      if (toLocalDateKey(addDays(firstDay, i)) === todayKey) return todayKey;
     }
     return windowStart;
-  }, [firstDay, lastDay, windowStart]);
+  }, [firstDay, windowStart]);
 
   const [selected, setSelected] = React.useState(defaultKey);
 

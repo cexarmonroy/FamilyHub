@@ -1,25 +1,15 @@
 import Link from "next/link";
 import { MemberAvatar } from "@/components/member-avatar";
 import { formatDistanceToNow } from "date-fns";
-import { startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowRight, ClipboardList, School, Stethoscope } from "lucide-react";
 import { MemberRelationBadge } from "@/components/member-relation-badge";
 import { DashboardAlertRowsClient } from "./dashboard-alert-rows-client";
 import { WeeklyAgendaClient } from "./weekly-agenda-client";
-import { formatAppDate, toLocalDateKey } from "@/lib/dates";
+import { formatAppDate, rollingSevenDayRangeAppTz, toLocalDateKey } from "@/lib/dates";
 import { buildDashboardState, type RawChronicMedication } from "@/lib/alerts/engine";
 import type { AlertLevel } from "@/lib/alerts/types";
 import { createClient } from "@/lib/supabase/server";
-
-/** Ventana móvil: hoy (00:00) … hoy+6 (23:59:59), para alinear datos y cinta con “desde hoy”. */
-function toRollingSevenDayRange() {
-  const rangeStart = startOfDay(new Date());
-  const rangeEnd = new Date(rangeStart);
-  rangeEnd.setDate(rangeEnd.getDate() + 6);
-  rangeEnd.setHours(23, 59, 59, 999);
-  return { rangeStart, rangeEnd };
-}
 
 function globalStatusCopy(status: AlertLevel): { text: string; className: string } {
   if (status === "critical") return { text: "Acciones urgentes", className: "text-red-600" };
@@ -38,9 +28,7 @@ export default async function DashboardPage() {
   const {
     data: { user: authUser }
   } = await supabase.auth.getUser();
-  const { rangeStart, rangeEnd } = toRollingSevenDayRange();
-  const rangeStartYmd = toLocalDateKey(rangeStart);
-  const rangeEndYmd = toLocalDateKey(rangeEnd);
+  const { rangeStart, rangeEnd, rangeStartYmd, rangeEndYmd } = rollingSevenDayRangeAppTz();
   const todayStr = toLocalDateKey(new Date());
 
   const [
