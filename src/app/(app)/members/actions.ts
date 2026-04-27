@@ -6,6 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function createMember(formData: FormData) {
   const supabase = await createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
   const fullName = String(formData.get("full_name") ?? "").trim();
   const relation = String(formData.get("relation") ?? "").trim();
   if (!fullName || !relation) {

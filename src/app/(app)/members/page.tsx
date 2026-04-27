@@ -4,9 +4,14 @@ import { MembersPageClient } from "@/components/members/members-page-client";
 import type { ActivityItem } from "@/components/members/recent-activity-section";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function MembersPage() {
+export default async function MembersPage({
+  searchParams
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const params = await searchParams;
   const supabase = await createClient();
-  const [{ data }, { data: recentNotes }] = await Promise.all([
+  const [{ data, error: membersError }, { data: recentNotes, error: notesError }] = await Promise.all([
     supabase
       .from("family_members")
       .select("id, full_name, relation, birth_date, avatar_url")
@@ -29,7 +34,11 @@ export default async function MembersPage() {
 
   return (
     <main>
-      <MembersPageClient members={members} activities={activities} />
+      <MembersPageClient
+        members={members}
+        activities={activities}
+        errorMessage={params.error ?? membersError?.message ?? notesError?.message}
+      />
     </main>
   );
 }

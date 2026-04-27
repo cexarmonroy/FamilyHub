@@ -13,7 +13,7 @@ function readMemberId(formData: FormData): string {
   return String(formData.get("member_id") ?? "").trim();
 }
 
-export async function addItem(formData: FormData) {
+async function requireMember(formData: FormData) {
   const memberId = readMemberId(formData);
   if (!memberId) redirect("/members?error=" + encodeURIComponent("Falta el integrante."));
 
@@ -30,12 +30,18 @@ export async function addItem(formData: FormData) {
     .maybeSingle();
   if (memberErr || !memberRow) schoolError(memberId, "Integrante no encontrado o sin permiso.");
 
+  return { memberId, supabase, userId: user.id };
+}
+
+export async function addItem(formData: FormData) {
+  const { memberId, supabase, userId } = await requireMember(formData);
+
   const item = String(formData.get("item") ?? "").trim();
   if (!item) schoolError(memberId, "Indica el nombre del material.");
 
   const { error } = await supabase.from("school_items").insert({
     member_id: memberId,
-    owner_user_id: user.id,
+    owner_user_id: userId,
     item,
     quantity: Number(formData.get("quantity") ?? 1) || 1,
     due_at: String(formData.get("due_at") ?? "").trim() || null,
@@ -46,21 +52,7 @@ export async function addItem(formData: FormData) {
 }
 
 export async function addTest(formData: FormData) {
-  const memberId = readMemberId(formData);
-  if (!memberId) redirect("/members?error=" + encodeURIComponent("Falta el integrante."));
-
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: memberRow, error: memberErr } = await supabase
-    .from("family_members")
-    .select("id")
-    .eq("id", memberId)
-    .maybeSingle();
-  if (memberErr || !memberRow) schoolError(memberId, "Integrante no encontrado o sin permiso.");
+  const { memberId, supabase, userId } = await requireMember(formData);
 
   const subject = String(formData.get("subject") ?? "").trim();
   let testAt = String(formData.get("test_at") ?? "").trim();
@@ -71,7 +63,7 @@ export async function addTest(formData: FormData) {
 
   const { error } = await supabase.from("school_tests").insert({
     member_id: memberId,
-    owner_user_id: user.id,
+    owner_user_id: userId,
     subject,
     test_at: testAt,
     notes: String(formData.get("notes") ?? "").trim() || null
@@ -81,21 +73,7 @@ export async function addTest(formData: FormData) {
 }
 
 export async function addTask(formData: FormData) {
-  const memberId = readMemberId(formData);
-  if (!memberId) redirect("/members?error=" + encodeURIComponent("Falta el integrante."));
-
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: memberRow, error: memberErr } = await supabase
-    .from("family_members")
-    .select("id")
-    .eq("id", memberId)
-    .maybeSingle();
-  if (memberErr || !memberRow) schoolError(memberId, "Integrante no encontrado o sin permiso.");
+  const { memberId, supabase, userId } = await requireMember(formData);
 
   const title = String(formData.get("title") ?? "").trim();
   let dueAt = String(formData.get("due_at") ?? "").trim();
@@ -106,7 +84,7 @@ export async function addTask(formData: FormData) {
 
   const { error } = await supabase.from("school_tasks").insert({
     member_id: memberId,
-    owner_user_id: user.id,
+    owner_user_id: userId,
     title,
     due_at: dueAt,
     status: String(formData.get("status") ?? "pending"),

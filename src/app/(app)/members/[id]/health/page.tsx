@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { APP_TIMEZONE, toLocalDateKey } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import {
   addMedication,
   addMetric,
@@ -236,9 +237,11 @@ export default async function HealthPage({
                   </div>
                 ) : null}
               </div>
-              <button className="button w-full py-4 text-base shadow-md" type="submit">
-                Guardar ficha
-              </button>
+              <PendingSubmitButton
+                idleText="Guardar ficha"
+                pendingText="Guardando..."
+                className="button w-full py-4 text-base shadow-md"
+              />
             </form>
           </section>
 
@@ -305,13 +308,11 @@ export default async function HealthPage({
                     required
                   />
                 </div>
-                <button
-                  type="submit"
+                <PendingSubmitButton
+                  idleText="Agregar métrica"
+                  pendingText="Guardando..."
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3 text-sm font-bold text-fh-primary transition hover:bg-fh-surface-container-lowest"
-                >
-                  <Plus className="size-4" strokeWidth={2.5} />
-                  Agregar métrica
-                </button>
+                />
               </form>
             </div>
           </section>
@@ -366,12 +367,11 @@ export default async function HealthPage({
                         <form action={markChronicMedicationTaken} className="ml-[3.25rem] w-fit">
                           <input type="hidden" name="member_id" value={id} />
                           <input type="hidden" name="medication_id" value={m.id} />
-                          <button
-                            type="submit"
+                          <PendingSubmitButton
+                            idleText="Registrar toma hoy"
+                            pendingText="Guardando..."
                             className="rounded-lg border border-fh-secondary/40 bg-fh-secondary-container/30 px-3 py-1.5 text-xs font-bold text-fh-secondary transition hover:bg-fh-secondary-container/50"
-                          >
-                            Registrar toma hoy
-                          </button>
+                          />
                         </form>
                       )
                     ) : null}
@@ -393,13 +393,11 @@ export default async function HealthPage({
                 <input className="input" name="dose" placeholder="Dosis" required />
                 <input className="input" name="frequency" placeholder="Frecuencia" required />
               </div>
-              <button
-                type="submit"
+              <PendingSubmitButton
+                idleText="Registrar medicación"
+                pendingText="Guardando..."
                 className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-fh-line-variant/40 py-3 text-sm font-bold text-fh-line transition hover:border-fh-primary hover:text-fh-primary"
-              >
-                <Plus className="size-4" strokeWidth={2.5} />
-                Registrar medicación
-              </button>
+              />
             </form>
           </section>
 
@@ -476,13 +474,11 @@ export default async function HealthPage({
                 <input className="input" name="applied_at" type="date" />
                 <input className="input" name="next_due_at" type="date" />
               </div>
-              <button
-                type="submit"
+              <PendingSubmitButton
+                idleText="Agregar vacuna"
+                pendingText="Guardando..."
                 className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-fh-line-variant/40 py-3 text-sm font-bold text-fh-line transition hover:border-fh-primary hover:text-fh-primary"
-              >
-                <Plus className="size-4" strokeWidth={2.5} />
-                Agregar vacuna
-              </button>
+              />
             </form>
           </section>
 
@@ -549,12 +545,11 @@ export default async function HealthPage({
                                   <form action={markMedicationCourseTaken} className="ml-6 w-fit">
                                     <input type="hidden" name="member_id" value={id} />
                                     <input type="hidden" name="course_id" value={c.id} />
-                                    <button
-                                      type="submit"
+                                    <PendingSubmitButton
+                                      idleText="Registrar toma hoy"
+                                      pendingText="Guardando..."
                                       className="rounded-lg border border-fh-secondary/40 bg-fh-secondary-container/30 px-3 py-1.5 text-xs font-bold text-fh-secondary transition hover:bg-fh-secondary-container/50"
-                                    >
-                                      Registrar toma hoy
-                                    </button>
+                                    />
                                   </form>
                                 )
                               ) : null}
@@ -613,13 +608,11 @@ export default async function HealthPage({
                   </div>
                 ))}
               </div>
-              <button
-                type="submit"
+              <PendingSubmitButton
+                idleText="Agregar visita"
+                pendingText="Guardando..."
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-fh-secondary py-4 text-sm font-bold text-fh-on-secondary shadow-md transition hover:opacity-95 active:scale-[0.99]"
-              >
-                <Plus className="size-5" strokeWidth={2.5} />
-                Agregar visita
-              </button>
+              />
             </form>
           </section>
         </div>

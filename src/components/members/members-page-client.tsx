@@ -10,6 +10,7 @@ import {
   RecentActivitySection,
   type ActivityItem
 } from "@/components/members/recent-activity-section";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 
 type Member = {
   id: string;
@@ -21,10 +22,12 @@ type Member = {
 
 export function MembersPageClient({
   members,
-  activities
+  activities,
+  errorMessage
 }: {
   members: Member[];
   activities: ActivityItem[];
+  errorMessage?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const firstFieldRef = React.useRef<HTMLInputElement>(null);
@@ -50,6 +53,14 @@ export function MembersPageClient({
 
   return (
     <div className="text-fh-on-surface">
+      {errorMessage ? (
+        <div
+          className="mb-6 rounded-stitch-lg border border-fh-error/30 bg-fh-error-container/15 px-4 py-3 text-sm text-fh-error"
+          role="alert"
+        >
+          <strong className="font-semibold">No se pudo guardar.</strong> {errorMessage}
+        </div>
+      ) : null}
       <header className="mb-10 flex flex-col justify-between gap-6 md:mb-12 md:flex-row md:items-end">
         <div className="space-y-2">
           <span className="text-sm font-semibold uppercase tracking-wider text-fh-secondary">
@@ -160,12 +171,11 @@ export function MembersPageClient({
                 >
                   Cancelar
                 </button>
-                <button
+                <PendingSubmitButton
+                  idleText="Guardar perfil"
+                  pendingText="Guardando..."
                   className="inline-flex flex-1 items-center justify-center rounded-xl bg-fh-primary px-4 py-2.5 text-sm font-bold text-fh-on-primary shadow-md shadow-fh-primary/15 transition hover:bg-fh-primary-dim focus:outline-none focus:ring-2 focus:ring-fh-primary/40 active:scale-[0.98] sm:flex-initial sm:min-w-[140px]"
-                  type="submit"
-                >
-                  Guardar perfil
-                </button>
+                />
               </div>
             </form>
             <p className="mt-4 text-center text-xs text-fh-line">

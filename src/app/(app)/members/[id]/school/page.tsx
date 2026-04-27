@@ -7,12 +7,11 @@ import {
   CalendarPlus,
   Check,
   ClipboardList,
-  GraduationCap,
-  Plus,
   Receipt
 } from "lucide-react";
 import { formatAppDate, formatAppTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { addItem, addTask, addTest, markTestRendered } from "./actions";
 
 function taskStatusLabel(status: string) {
@@ -146,13 +145,11 @@ export default async function SchoolPage({
                 <input className="input" name="quantity" type="number" min={1} defaultValue={1} required />
                 <input className="input" name="due_at" type="date" />
               </div>
-              <button
-                type="submit"
+              <PendingSubmitButton
+                idleText="Agregar material"
+                pendingText="Guardando..."
                 className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-fh-line-variant/30 py-3 text-sm font-medium text-fh-on-surface-variant transition hover:border-fh-primary/40 hover:text-fh-primary"
-              >
-                <Plus className="size-4" strokeWidth={2.5} />
-                Agregar material
-              </button>
+              />
             </form>
           </div>
 
@@ -236,12 +233,11 @@ export default async function SchoolPage({
                     <form action={markTestRendered} className="mt-3 border-t border-fh-line-variant/10 pt-3">
                       <input type="hidden" name="member_id" value={id} />
                       <input type="hidden" name="test_id" value={t.id} />
-                      <button
-                        type="submit"
+                      <PendingSubmitButton
+                        idleText="Marcar como rendida"
+                        pendingText="Guardando..."
                         className="w-full rounded-lg border border-fh-tertiary/40 bg-fh-tertiary-container/30 py-2 text-xs font-bold text-fh-tertiary transition hover:bg-fh-tertiary-container/50"
-                      >
-                        Marcar como rendida
-                      </button>
+                      />
                     </form>
                   ) : null}
                 </div>
@@ -256,13 +252,11 @@ export default async function SchoolPage({
             <input className="input" name="subject" placeholder="Asignatura" required />
             <input className="input" name="test_at" type="datetime-local" required />
             <textarea className="input" name="notes" placeholder="Notas o temario" rows={2} />
-            <button
-              type="submit"
+            <PendingSubmitButton
+              idleText="Agregar prueba"
+              pendingText="Guardando..."
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-fh-tertiary py-3 text-sm font-bold text-fh-on-tertiary shadow-md transition hover:opacity-90 active:scale-[0.98]"
-            >
-              <Plus className="size-4" strokeWidth={2.5} />
-              Agregar prueba
-            </button>
+            />
           </form>
         </section>
 
@@ -353,13 +347,11 @@ export default async function SchoolPage({
               <option value="in_progress">En curso</option>
               <option value="done">Hecha</option>
             </select>
-            <button
-              type="submit"
+            <PendingSubmitButton
+              idleText="Agregar tarea"
+              pendingText="Guardando..."
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-fh-surface-container-high py-3 text-sm font-bold text-fh-on-surface transition hover:bg-fh-surface-container-highest active:scale-[0.99]"
-            >
-              <GraduationCap className="size-4" strokeWidth={2} />
-              Agregar tarea
-            </button>
+            />
           </form>
         </section>
       </div>

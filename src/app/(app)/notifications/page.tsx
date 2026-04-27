@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { formatAppDateTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { markAsRead } from "./actions";
@@ -10,7 +11,7 @@ export default async function NotificationsPage({
 }) {
   const params = await searchParams;
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("notifications")
     .select("id, title, body, event_at, read_at")
     .order("event_at", { ascending: false });
@@ -20,6 +21,11 @@ export default async function NotificationsPage({
       {params.error ? (
         <p className="mb-4 rounded-stitch border border-fh-error/30 bg-fh-surface-container-low p-3 text-sm text-fh-error">
           {params.error}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="mb-4 rounded-stitch border border-fh-error/30 bg-fh-surface-container-low p-3 text-sm text-fh-error">
+          No se pudieron cargar las notificaciones: {error.message}
         </p>
       ) : null}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -40,9 +46,11 @@ export default async function NotificationsPage({
             {!n.read_at ? (
               <form action={markAsRead} className="mt-3">
                 <input type="hidden" name="notification_id" value={n.id} />
-                <button className="button-secondary text-xs" type="submit">
-                  Marcar leída
-                </button>
+                <PendingSubmitButton
+                  idleText="Marcar leída"
+                  pendingText="Guardando..."
+                  className="button-secondary text-xs"
+                />
               </form>
             ) : (
               <p className="mt-3 text-xs font-medium text-fh-primary">Leída</p>

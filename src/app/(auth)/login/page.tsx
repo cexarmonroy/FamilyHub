@@ -1,4 +1,5 @@
 import { signIn, signUp } from "./actions";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 
 export default async function LoginPage({
   searchParams
@@ -46,12 +47,17 @@ export default async function LoginPage({
             </p>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
-            <button className="button min-h-10 w-full" type="submit">
-              Ingresar
-            </button>
-            <button className="button-secondary min-h-10 w-full" formAction={signUp} type="submit">
-              Crear cuenta
-            </button>
+            <PendingSubmitButton
+              idleText="Ingresar"
+              pendingText="Ingresando..."
+              className="button min-h-10 w-full"
+            />
+            <PendingSubmitButton
+              idleText="Crear cuenta"
+              pendingText="Creando..."
+              className="button-secondary min-h-10 w-full"
+              formAction={signUp}
+            />
           </div>
         </form>
       </div>

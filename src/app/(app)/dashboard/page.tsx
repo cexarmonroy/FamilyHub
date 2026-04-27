@@ -44,14 +44,14 @@ export default async function DashboardPage() {
   const todayStr = toLocalDateKey(new Date());
 
   const [
-    { data: tests },
-    { data: tasks },
-    { data: vaccines },
-    { data: unreadNotifications },
-    { data: visitCourses },
-    { data: members },
-    { data: feedNotes },
-    { data: snoozeRows }
+    testsRes,
+    tasksRes,
+    vaccinesRes,
+    unreadRes,
+    visitCoursesRes,
+    membersRes,
+    feedRes,
+    snoozeRes
   ] = await Promise.all([
     supabase
       .from("school_tests")
@@ -98,40 +98,90 @@ export default async function DashboardPage() {
           .from("dashboard_alert_snoozes")
           .select("alert_key")
           .gt("snoozed_until", new Date().toISOString())
-      : Promise.resolve({ data: [] as { alert_key: string }[] })
+      : Promise.resolve({ data: [] as { alert_key: string }[], error: null })
   ]);
 
-  const memberRows = members ?? [];
+  const tests = testsRes.data ?? [];
+  const tasks = tasksRes.data ?? [];
+  const vaccines = vaccinesRes.data ?? [];
+  const unreadNotifications = unreadRes.data ?? [];
+  const visitCourses = visitCoursesRes.data ?? [];
+  const memberRows = membersRes.data ?? [];
+  const feedNotes = feedRes.data ?? [];
+  const snoozeRows = snoozeRes.data ?? [];
   const memberIds = memberRows.map((m) => m.id);
 
-  const { data: chronicMeds } =
+  const chronicMedsRes =
     memberIds.length > 0
       ? await supabase
           .from("medications")
           .select("id, member_id, name, family_members(full_name)")
           .in("member_id", memberIds)
           .eq("active", true)
-      : { data: [] as RawChronicMedication[] };
+      : { data: [] as RawChronicMedication[], error: null };
+  const chronicMeds = chronicMedsRes.data ?? [];
 
-  const chronicIds = (chronicMeds ?? []).map((m) => m.id);
-  const { data: chronicLogRows } =
+  const chronicIds = chronicMeds.map((m) => m.id);
+  const chronicLogRowsRes =
     chronicIds.length > 0
       ? await supabase
           .from("chronic_medication_logs")
           .select("medication_id")
           .in("medication_id", chronicIds)
           .eq("logged_on", todayStr)
-      : { data: [] as { medication_id: string }[] };
+      : { data: [] as { medication_id: string }[], error: null };
+  const chronicLogRows = chronicLogRowsRes.data ?? [];
 
-  const { data: chronicLogHistory } =
-    chronicIds.length > 0
-      ? await supabase.rpc("get_chronic_medications_last_log", {
-          p_medication_ids: chronicIds
-        })
-      : { data: [] as { medication_id: string; last_logged_on: string | null }[] };
+  let chronicLogHistory: { medication_id: string; last_logged_on: string | null }[] = [];
+  let chronicLogHistoryError: string | null = null;
+  if (chronicIds.length > 0) {
+    const rpcRes = await supabase.rpc("get_chronic_medications_last_log", {
+      p_medication_ids: chronicIds
+    });
+    if (!rpcRes.error) {
+      chronicLogHistory = (rpcRes.data ?? []) as { medication_id: string; last_logged_on: string | null }[];
+    } else if (rpcRes.error.message.includes("get_chronic_medications_last_log")) {
+      const fallbackRes = await supabase
+        .from("chronic_medication_logs")
+        .select("medication_id, logged_on")
+        .in("medication_id", chronicIds);
+
+      if (fallbackRes.error) {
+        chronicLogHistoryError = fallbackRes.error.message;
+      } else {
+        const byMedication = new Map<string, string>();
+        for (const row of fallbackRes.data ?? []) {
+          const current = byMedication.get(row.medication_id);
+          if (!current || row.logged_on > current) {
+            byMedication.set(row.medication_id, row.logged_on);
+          }
+        }
+        chronicLogHistory = chronicIds.map((id) => ({
+          medication_id: id,
+          last_logged_on: byMedication.get(id) ?? null
+        }));
+      }
+    } else {
+      chronicLogHistoryError = rpcRes.error.message;
+    }
+  }
+
+  const loadError =
+    testsRes.error?.message ??
+    tasksRes.error?.message ??
+    vaccinesRes.error?.message ??
+    unreadRes.error?.message ??
+    visitCoursesRes.error?.message ??
+    membersRes.error?.message ??
+    feedRes.error?.message ??
+    snoozeRes.error?.message ??
+    chronicMedsRes.error?.message ??
+    chronicLogRowsRes.error?.message ??
+    chronicLogHistoryError ??
+    null;
 
   const chronicLastLogYmdByMedicationId: Record<string, string | null> = {};
-  for (const row of (chronicLogHistory ?? []) as { medication_id: string; last_logged_on: string | null }[]) {
+  for (const row of chronicLogHistory as { medication_id: string; last_logged_on: string | null }[]) {
     const loggedOn = row.last_logged_on ?? null;
     const cur = chronicLastLogYmdByMedicationId[row.medication_id];
     if (!cur || (loggedOn && loggedOn > cur)) {
@@ -139,22 +189,22 @@ export default async function DashboardPage() {
     }
   }
 
-  const loggedChronic = new Set((chronicLogRows ?? []).map((r) => r.medication_id));
-  const chronicPending = (chronicMeds ?? []).filter((m) => !loggedChronic.has(m.id)) as RawChronicMedication[];
+  const loggedChronic = new Set(chronicLogRows.map((r) => r.medication_id));
+  const chronicPending = chronicMeds.filter((m) => !loggedChronic.has(m.id)) as RawChronicMedication[];
 
   const snoozedKeys = new Set((snoozeRows ?? []).map((r) => r.alert_key));
 
   const dash = buildDashboardState({
     rangeStart,
     rangeEnd,
-    tests: tests ?? [],
-    tasks: tasks ?? [],
-    vaccines: (vaccines ?? []).map((v) => ({
+    tests,
+    tasks,
+    vaccines: vaccines.map((v) => ({
       ...v,
       applied_at: v.applied_at ?? null
     })),
-    visitCourses: visitCourses ?? [],
-    notifications: (unreadNotifications ?? []).map((n) => ({
+    visitCourses,
+    notifications: unreadNotifications.map((n) => ({
       id: n.id,
       title: n.title,
       body: n.body,
@@ -182,13 +232,13 @@ export default async function DashboardPage() {
   };
 
   const upcomingHealthRows = [
-    ...((vaccines ?? []).map((v) => ({
+    ...(vaccines.map((v) => ({
       id: `vac-${v.id}`,
       title: `Vacuna: ${v.vaccine_name}`,
       detail: `${memberName(v)} · ${v.next_due_at}`,
       sortKey: v.next_due_at ?? "9999-12-31"
     })) ?? []),
-    ...((visitCourses ?? []).map((c) => ({
+    ...(visitCourses.map((c) => ({
       id: `course-${c.id}`,
       title: `Tratamiento: ${c.medication_name}`,
       detail: `${memberName(c)} · hasta ${c.treatment_end}`,
@@ -197,13 +247,21 @@ export default async function DashboardPage() {
   ]
     .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
     .slice(0, 3);
-  const upcomingTasksRows = (tasks ?? []).filter((t) => t.status !== "done").slice(0, 2);
+  const upcomingTasksRows = tasks.filter((t) => t.status !== "done").slice(0, 2);
 
   const header = globalStatusCopy(dash.globalStatus);
 
   return (
     <main className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-12">
       <div className="space-y-8 lg:col-span-8">
+        {loadError ? (
+          <div
+            className="rounded-stitch-lg border border-fh-error/30 bg-fh-error-container/15 px-4 py-3 text-sm text-fh-error"
+            role="alert"
+          >
+            No se pudo cargar parte del tablero: {loadError}
+          </div>
+        ) : null}
         <section>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
